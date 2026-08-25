@@ -12,25 +12,22 @@ strings = [''.join([node.text for node in si.iter() if node.text]) for si in ss_
 
 wb_rels = {r.attrib['Id']: r.attrib['Target'] for r in ET.fromstring(z.read('xl/_rels/workbook.xml.rels')).findall('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship')}
 wb_xml = ET.fromstring(z.read('xl/workbook.xml'))
-sheets = [(s.attrib['name'], wb_rels[s.attrib.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')]) for s in wb_xml.findall('.//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheet')]
-sheet_map = {name: target for name, target in sheets}
+sheets = {s.attrib['name']: wb_rels[s.attrib.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')] for s in wb_xml.findall('.//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheet')}
 
-def col_letter(ref):
-    return re.match(r'([A-Z]+)', ref).group(1)
+def col_letter(ref): return re.match(r'([A-Z]+)', ref).group(1)
 
 def excel_date(val, default_date='2026-01-01'):
-    if not val:
-        return default_date
+    if not val or not str(val).strip(): return default_date
     try:
         n = float(val)
         if 30000 <= n <= 60000:
-            dt = datetime.datetime(1899, 12, 30) + datetime.timedelta(days=int(n))
-            return dt.strftime('%Y-%m-%d')
-        return str(val)
+            return (datetime.datetime(1899, 12, 30) + datetime.timedelta(days=int(n))).strftime('%Y-%m-%d')
+        return str(val).strip()
     except:
-        return str(val)
+        return str(val).strip()
 
-def extract_rows(target):
+def extract_rows(sheet_name):
+    target = sheets[sheet_name]
     target_path = 'xl/' + target if not target.startswith('xl/') else target
     sheet_xml = ET.fromstring(z.read(target_path))
     rows = {}
@@ -67,17 +64,15 @@ def map_acc(name, cat='', comment=''):
     n = (name or '').strip().lower()
     c = (cat or '').strip().lower()
     cm = (comment or '').strip().lower()
-    if 'irpf' in n or 'irpf' in c or 'irpf' in cm:
-        return 'acc-sab-irpf'
-    if 'ahorro' in n:
-        return 'acc-sab-ahorro'
+    if 'irpf' in n or 'irpf' in c or 'irpf' in cm: return 'acc-sab-irpf'
+    if 'ahorro' in n: return 'acc-sab-ahorro'
     for k, v in account_map.items():
-        if k in n:
-            return v
+        if k in n: return v
     return 'acc-santander'
 
-# Months configuration
+# Months configuration: November 2025 through August 2026
 months_info = [
+    ('NOVIEMBRE', '2025-11-01'),
     ('DICIEMBRE', '2025-12-01'),
     ('ENERO26', '2026-01-01'),
     ('FEBRERO26', '2026-02-01'),
@@ -86,35 +81,28 @@ months_info = [
     ('MAYO26', '2026-05-01'),
     ('JUNIO26', '2026-06-01'),
     ('JULIO26', '2026-07-01'),
-    ('AGOSTO26', '2026-08-01'),
-    ('SEPTIEMBRE26', '2026-09-01')
+    ('AGOSTO26', '2026-08-01')
 ]
 
 all_movs = []
 id_counter = 1724500000000
 
 for s_name, m_start_date in months_info:
-    if s_name not in sheet_map:
-        continue
-    rows = extract_rows(sheet_map[s_name])
+    if s_name not in sheets: continue
+    rows = extract_rows(s_name)
     last_date = m_start_date
 
-    # 1. Check salary block (e.g. Maristas, Claret, Academia, and distributions)
-    # Maristas is row 12 (or 11), Claret is row 13 (or 12), Academia is row 14 (or 13)
     salaries = {}
     for r_idx in range(11, 16):
         if r_idx in rows:
-            src_name = rows[r_idx].get('A', '')
+            src_name = (rows[r_idx].get('A') or '').strip()
             val = rows[r_idx].get('B')
             if src_name in ['Maristas', 'Claret', 'Academia'] and val:
                 try:
                     num_val = float(val)
-                    if num_val > 0:
-                        salaries[src_name] = num_val
-                except:
-                    pass
+                    if num_val > 0: salaries[src_name] = num_val
+                except: pass
 
-    # Add payroll income movements on the 1st of the month if present
     for src, amt in salaries.items():
         id_counter += 1000
         all_movs.append({
@@ -127,8 +115,6 @@ for s_name, m_start_date in months_info:
             'comentario': f'Nómina {src}'
         })
 
-    # Add salary distribution movements (IRPF to Sabadell IRPF, Ahorro to Sabadell Ahorro)
-    # Let's extract IRPF and Ahorro amounts from row 15 (TOTAL row cols C and D)
     if 15 in rows and rows[15].get('A') == 'TOTAL':
         irpf_val = rows[15].get('C')
         ahorro_val = rows[15].get('D')
@@ -159,39 +145,42 @@ for s_name, m_start_date in months_info:
                     'categoria': 'Reparto Sueldo',
                     'comentario': 'Ahorro (50%) a Sabadell Ahorro'
                 })
-        except:
-            pass
+        except: pass
 
-    # 2. Extract movement table rows
     raw_sheet_rows = []
     for r_idx in sorted(rows.keys()):
         if r_idx == 1: continue
         r = rows[r_idx]
-        fecha_raw = r.get('J')
-        tipo_raw = r.get('K')
-        cuenta_raw = r.get('L')
-        cat_raw = r.get('M')
-        monto_raw = r.get('N')
-        coment_raw = r.get('O')
+        if s_name == 'NOVIEMBRE':
+            fecha_raw = r.get('I')
+            tipo_raw = r.get('J')
+            cuenta_raw = r.get('K')
+            cat_raw = r.get('L')
+            monto_raw = r.get('M')
+            coment_raw = r.get('N')
+        else:
+            fecha_raw = r.get('J')
+            tipo_raw = r.get('K')
+            cuenta_raw = r.get('L')
+            cat_raw = r.get('M')
+            monto_raw = r.get('N')
+            coment_raw = r.get('O')
 
-        if not tipo_raw or not monto_raw:
-            continue
-        
+        if not tipo_raw or not monto_raw: continue
         t_clean = str(tipo_raw).strip().lower()
-        if not any(x in t_clean for x in ['gasto', 'ingreso', 'transf', 'inver']):
-            continue
+        if not any(x in t_clean for x in ['gasto', 'ingreso', 'transf', 'inver']): continue
         
-        if fecha_raw:
-            last_date = excel_date(fecha_raw, last_date)
+        if fecha_raw and str(fecha_raw).strip():
+            parsed_d = excel_date(fecha_raw, last_date)
+            if len(parsed_d) == 10 and parsed_d.startswith('202'):
+                last_date = parsed_d
         
-        try:
-            monto = float(monto_raw)
-        except:
-            continue
+        try: monto = float(monto_raw)
+        except: continue
             
         raw_sheet_rows.append({
             'row': r_idx,
-            'fecha': last_date,
+            'fecha': last_date if len(last_date) == 10 else m_start_date,
             'tipo': t_clean,
             'cuenta': (cuenta_raw or '').strip(),
             'categoria': (cat_raw or '').strip(),
@@ -203,26 +192,16 @@ for s_name, m_start_date in months_info:
     while i < len(raw_sheet_rows):
         cur = raw_sheet_rows[i]
         t = cur['tipo']
-        
-        # Check paired transfer
         if ('transf' in t or 'inver' in t) and i + 1 < len(raw_sheet_rows):
             nxt = raw_sheet_rows[i+1]
             if ('transf' in nxt['tipo'] or 'inver' in nxt['tipo']) and abs(cur['monto'] + nxt['monto']) < 0.01:
-                if cur['monto'] < 0:
-                    orig_row = cur
-                    dest_row = nxt
-                else:
-                    orig_row = nxt
-                    dest_row = cur
-                
+                if cur['monto'] < 0: orig_row, dest_row = cur, nxt
+                else: orig_row, dest_row = nxt, cur
                 orig_acc = map_acc(orig_row['cuenta'], orig_row['categoria'], orig_row['comentario'])
                 dest_acc = map_acc(dest_row['cuenta'], dest_row['categoria'], dest_row['comentario'])
-                if 'inver' in t or 'trade' in dest_row['cuenta'].lower():
-                    dest_acc = 'acc-trade'
-                
+                if 'inver' in t or 'trade' in dest_row['cuenta'].lower(): dest_acc = 'acc-trade'
                 cat = cur['categoria'] or nxt['categoria'] or ('Inversiones' if 'inver' in t else '')
                 com = cur['comentario'] or nxt['comentario'] or ''
-                
                 id_counter += 1000
                 all_movs.append({
                     'id': f'mov-{id_counter}',
@@ -281,21 +260,55 @@ for s_name, m_start_date in months_info:
                 'categoria': cur['categoria'] or ('Inversiones' if 'inver' in t else ''),
                 'comentario': cur['comentario']
             })
-        
         i += 1
 
-# Initial balances as of Dec 1, 2025 (matching sheet DICIEMBRE row 2-6)
-cuentas_init = [
-    { 'id': 'acc-santander', 'nombre': 'Santander', 'tipo': 'banco', 'activa': True, 'color': '#DC2626', 'saldoInicial': -25.47 },
-    { 'id': 'acc-bbva', 'nombre': 'BBVA', 'tipo': 'banco', 'activa': True, 'color': '#1E3A8A', 'saldoInicial': 121.80 },
-    { 'id': 'acc-sab-ahorro', 'nombre': 'Sabadell Ahorro', 'tipo': 'banco', 'activa': True, 'color': '#0284C7', 'saldoInicial': 1143.97 },
-    { 'id': 'acc-sab-irpf', 'nombre': 'Sabadell IRPF', 'tipo': 'banco', 'activa': True, 'color': '#0EA5E9', 'saldoInicial': 202.04 },
-    { 'id': 'acc-trade', 'nombre': 'Trade Republic', 'tipo': 'inversion', 'activa': True, 'color': '#18181B', 'saldoInicial': 1031.55 },
-    { 'id': 'acc-efectivo', 'nombre': 'Efectivo', 'tipo': 'metalico', 'activa': True, 'color': '#16A34A', 'saldoInicial': 335.05 }
+# SORT DESCENDING (most recent first: August 2026 down to November 2025)
+all_movs.sort(key=lambda m: (m['fecha'], m['id']), reverse=True)
+
+# Initial balances as of Nov 1, 2025
+cuentas = [
+    { 'id': 'acc-santander', 'nombre': 'Santander', 'tipo': 'banco', 'activa': True, 'incluirEnTotal': True, 'color': '#DC2626', 'saldoInicial': 145.30 },
+    { 'id': 'acc-bbva', 'nombre': 'BBVA', 'tipo': 'banco', 'activa': True, 'incluirEnTotal': True, 'color': '#1E3A8A', 'saldoInicial': 180.69 },
+    { 'id': 'acc-sab-ahorro', 'nombre': 'Sabadell Ahorro', 'tipo': 'banco', 'activa': True, 'incluirEnTotal': True, 'color': '#0284C7', 'saldoInicial': 1143.97 },
+    { 'id': 'acc-sab-irpf', 'nombre': 'Sabadell IRPF', 'tipo': 'banco', 'activa': True, 'incluirEnTotal': False, 'color': '#0EA5E9', 'saldoInicial': 202.04 },
+    { 'id': 'acc-trade', 'nombre': 'Trade Republic', 'tipo': 'inversion', 'activa': True, 'incluirEnTotal': True, 'color': '#18181B', 'saldoInicial': 1031.55 },
+    { 'id': 'acc-efectivo', 'nombre': 'Efectivo', 'tipo': 'metalico', 'activa': True, 'incluirEnTotal': True, 'color': '#16A34A', 'saldoInicial': 260.00 }
+]
+
+categorias = [
+    { 'id': 'cat-alquiler', 'nombre': 'Alquiler', 'tipo': 'gasto', 'color': '#ef4444' },
+    { 'id': 'cat-comida', 'nombre': 'Comida', 'tipo': 'gasto', 'color': '#f97316' },
+    { 'id': 'cat-comer-fuera', 'nombre': 'Comer Fuera', 'tipo': 'gasto', 'color': '#eab308' },
+    { 'id': 'cat-cervezas', 'nombre': 'Cervezas', 'tipo': 'gasto', 'color': '#84cc16' },
+    { 'id': 'cat-carnet', 'nombre': 'Carnet de Conducir', 'tipo': 'gasto', 'color': '#06b6d4' },
+    { 'id': 'cat-suscripciones', 'nombre': 'Suscripciones', 'tipo': 'gasto', 'color': '#6366f1' },
+    { 'id': 'cat-planes', 'nombre': 'Planes', 'tipo': 'gasto', 'color': '#a855f7' },
+    { 'id': 'cat-regalos', 'nombre': 'Regalos', 'tipo': 'gasto', 'color': '#ec4899' },
+    { 'id': 'cat-ropa', 'nombre': 'Ropa', 'tipo': 'gasto', 'color': '#f43f5e' },
+    { 'id': 'cat-inversiones', 'nombre': 'Inversiones', 'tipo': 'gasto', 'color': '#10b981' },
+    { 'id': 'cat-universidad', 'nombre': 'Universidad', 'tipo': 'gasto', 'color': '#3b82f6' },
+    { 'id': 'cat-utilidad', 'nombre': 'Utilidad', 'tipo': 'gasto', 'color': '#64748b' },
+    { 'id': 'cat-viajes', 'nombre': 'Viajes', 'tipo': 'gasto', 'color': '#14b8a6' },
+    { 'id': 'cat-fisio', 'nombre': 'Fisio', 'tipo': 'gasto', 'color': '#d946ef' },
+    { 'id': 'cat-caprichos', 'nombre': 'Caprichos', 'tipo': 'gasto', 'color': '#f59e0b' },
+    { 'id': 'cat-compartida', 'nombre': 'Cuenta compartida', 'tipo': 'gasto', 'color': '#8b5cf6' },
+    { 'id': 'cat-sueldo', 'nombre': 'Sueldo/Nómina', 'tipo': 'ingreso', 'color': '#10b981' },
+    { 'id': 'cat-clases', 'nombre': 'Clases Particulares', 'tipo': 'ingreso', 'color': '#059669' },
+    { 'id': 'cat-bizum-madre', 'nombre': 'Bizum Madre', 'tipo': 'ingreso', 'color': '#db2777' },
+    { 'id': 'cat-ventas', 'nombre': 'Ventas', 'tipo': 'ingreso', 'color': '#0284c7' },
+    { 'id': 'cat-otros-gastos', 'nombre': 'Otros Gastos', 'tipo': 'gasto', 'color': '#64748b' },
+    { 'id': 'cat-otros-ingresos', 'nombre': 'Otros Ingresos', 'tipo': 'ingreso', 'color': '#10b981' }
+]
+
+fuentes_ingreso = [
+    { 'id': 'src-claret', 'nombre': 'Claret', 'importeDefecto': 1508.53 },
+    { 'id': 'src-maristas', 'nombre': 'Maristas', 'importeDefecto': 603.39 },
+    { 'id': 'src-academia', 'nombre': 'Academia', 'importeDefecto': 346.44 },
+    { 'id': 'src-particulares', 'nombre': 'Clases Particulares', 'importeDefecto': 0.00 }
 ]
 
 data_output = {
-    'version': '1.0',
+    'version': '1.1',
     'clientUpdated': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
     'config': {
         'repartoSueldo': {
@@ -303,59 +316,40 @@ data_output = {
             'ahorro': 0.50,
             'gasto': 0.32
         },
-        'inversionFija': 60.00
+        'inversionFija': 60.00,
+        'gastosFijosDefecto': [
+            { 'nombre': 'Alquiler + Gastos Casa', 'categoria': 'Alquiler', 'cuenta': 'acc-santander', 'importe': 325.00 },
+            { 'nombre': 'Spotify', 'categoria': 'Suscripciones', 'cuenta': 'acc-santander', 'importe': 6.49 },
+            { 'nombre': 'Basic Fit', 'categoria': 'Suscripciones', 'cuenta': 'acc-santander', 'importe': 24.99 },
+            { 'nombre': 'AppleCare+', 'categoria': 'Suscripciones', 'cuenta': 'acc-santander', 'importe': 5.49 }
+        ]
     },
-    'cuentas': cuentas_init,
-    'categorias': [
-        { 'id': 'cat-alquiler', 'nombre': 'Alquiler', 'tipo': 'gasto', 'color': '#ef4444' },
-        { 'id': 'cat-comida', 'nombre': 'Comida', 'tipo': 'gasto', 'color': '#f97316' },
-        { 'id': 'cat-comer-fuera', 'nombre': 'Comer Fuera', 'tipo': 'gasto', 'color': '#eab308' },
-        { 'id': 'cat-cervezas', 'nombre': 'Cervezas', 'tipo': 'gasto', 'color': '#84cc16' },
-        { 'id': 'cat-carnet', 'nombre': 'Carnet de Conducir', 'tipo': 'gasto', 'color': '#06b6d4' },
-        { 'id': 'cat-suscripciones', 'nombre': 'Suscripciones', 'tipo': 'gasto', 'color': '#6366f1' },
-        { 'id': 'cat-planes', 'nombre': 'Planes', 'tipo': 'gasto', 'color': '#a855f7' },
-        { 'id': 'cat-regalos', 'nombre': 'Regalos', 'tipo': 'gasto', 'color': '#ec4899' },
-        { 'id': 'cat-ropa', 'nombre': 'Ropa', 'tipo': 'gasto', 'color': '#f43f5e' },
-        { 'id': 'cat-inversiones', 'nombre': 'Inversiones', 'tipo': 'gasto', 'color': '#10b981' },
-        { 'id': 'cat-universidad', 'nombre': 'Universidad', 'tipo': 'gasto', 'color': '#3b82f6' },
-        { 'id': 'cat-utilidad', 'nombre': 'Utilidad', 'tipo': 'gasto', 'color': '#64748b' },
-        { 'id': 'cat-viajes', 'nombre': 'Viajes', 'tipo': 'gasto', 'color': '#14b8a6' },
-        { 'id': 'cat-fisio', 'nombre': 'Fisio', 'tipo': 'gasto', 'color': '#d946ef' },
-        { 'id': 'cat-caprichos', 'nombre': 'Caprichos', 'tipo': 'gasto', 'color': '#f59e0b' },
-        { 'id': 'cat-compartida', 'nombre': 'Cuenta compartida', 'tipo': 'gasto', 'color': '#8b5cf6' },
-        { 'id': 'cat-sueldo', 'nombre': 'Sueldo/Nómina', 'tipo': 'ingreso', 'color': '#10b981' },
-        { 'id': 'cat-clases', 'nombre': 'Clases Particulares', 'tipo': 'ingreso', 'color': '#059669' },
-        { 'id': 'cat-bizum-madre', 'nombre': 'Bizum Madre', 'tipo': 'ingreso', 'color': '#db2777' },
-        { 'id': 'cat-ventas', 'nombre': 'Ventas', 'tipo': 'ingreso', 'color': '#0284c7' },
-        { 'id': 'cat-otros-gastos', 'nombre': 'Otros Gastos', 'tipo': 'gasto', 'color': '#64748b' },
-        { 'id': 'cat-otros-ingresos', 'nombre': 'Otros Ingresos', 'tipo': 'ingreso', 'color': '#10b981' }
-    ],
-    'fuentesIngreso': [
-        { 'id': 'src-claret', 'nombre': 'Claret' },
-        { 'id': 'src-maristas', 'nombre': 'Maristas' },
-        { 'id': 'src-academia', 'nombre': 'Academia' },
-        { 'id': 'src-particulares', 'nombre': 'Clases Particulares' }
-    ],
+    'cuentas': cuentas,
+    'categorias': categorias,
+    'fuentesIngreso': fuentes_ingreso,
     'movimientos': all_movs
 }
 
-with open('data.json', 'w', encoding='utf-8') as f:
+with open(r'g:\Mi unidad\Finanzas 2026\data.json', 'w', encoding='utf-8') as f:
     json.dump(data_output, f, indent=2, ensure_ascii=False)
 
-print(f"Extraction successful: {len(all_movs)} total movements written to data.json")
+print(f"Extracción completada con éxito: {len(all_movs)} movimientos escritos en data.json (Ordenados de más reciente a más antiguo)")
 
-balances = {acc['id']: acc.get('saldoInicial', 0.0) for acc in data_output['cuentas']}
+balances = {c['id']: c['saldoInicial'] for c in cuentas}
 for m in all_movs:
     imp = m['importe']
-    if m['tipo'] == 'gasto':
-        balances[m['cuentaOrigen']] = balances.get(m['cuentaOrigen'], 0.0) - imp
-    elif m['tipo'] == 'ingreso':
-        balances[m['cuentaDestino']] = balances.get(m['cuentaDestino'], 0.0) + imp
+    if m['tipo'] == 'gasto': balances[m['cuentaOrigen']] -= imp
+    elif m['tipo'] == 'ingreso': balances[m['cuentaDestino']] += imp
     elif m['tipo'] == 'transferencia':
-        balances[m['cuentaOrigen']] = balances.get(m['cuentaOrigen'], 0.0) - imp
-        balances[m['cuentaDestino']] = balances.get(m['cuentaDestino'], 0.0) + imp
+        balances[m['cuentaOrigen']] -= imp
+        balances[m['cuentaDestino']] += imp
 
-print("=== CALCULATED ACCOUNT BALANCES ===")
-for acc in data_output['cuentas']:
-    print(f"  {acc['nombre']}: {balances.get(acc['id'], 0.0):.2f} EUR")
-print(f"Total Patrimonio: {sum(balances.values()):.2f} EUR")
+print("\n=== SALDOS EXACTOS CALCULADOS A 25 DE AGOSTO DE 2026 ===")
+for c in cuentas:
+    sin_total_txt = " [NO SUMA EN TOTAL]" if not c['incluirEnTotal'] else ""
+    print(f"  {c['nombre']}: {balances[c['id']]:.2f} EUR{sin_total_txt}")
+
+patrimonio_total = sum(balances[c['id']] for c in cuentas if c['activa'])
+patrimonio_sin_irpf = sum(balances[c['id']] for c in cuentas if c['activa'] and c['incluirEnTotal'])
+print(f"\nPATRIMONIO TOTAL (todas las cuentas): {patrimonio_total:.2f} EUR")
+print(f"PATRIMONIO TOTAL DISPONIBLE (excluyendo Sabadell IRPF): {patrimonio_sin_irpf:.2f} EUR")

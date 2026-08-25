@@ -65,7 +65,7 @@ class ErrorBoundary extends Component {
 }
 
 // ==========================================
-// 🎨 ICONOS SVG MINIMALISTAS (100% Offline & Native)
+// 🎨 ICONOS SVG MINIMALISTAS
 // ==========================================
 const Icon = ({
   name,
@@ -223,11 +223,11 @@ const Icon = ({
       strokeWidth: "2",
       d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
     }),
-    users: /*#__PURE__*/React.createElement("path", {
+    checkCircle: /*#__PURE__*/React.createElement("path", {
       strokeLinecap: "round",
       strokeLinejoin: "round",
       strokeWidth: "2",
-      d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+      d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
     })
   };
   return /*#__PURE__*/React.createElement("svg", {
@@ -262,6 +262,21 @@ const formatDate = dateStr => {
   } catch (e) {
     return dateStr;
   }
+};
+
+// Modificación 3: Formatear meses como "Agosto 2026", "Enero 2026", etc.
+const formatMonthName = monthKey => {
+  if (!monthKey || monthKey === 'todos') return 'Todos los meses';
+  const parts = monthKey.split('-');
+  if (parts.length === 2) {
+    const year = parts[0];
+    const month = parseInt(parts[1], 10);
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    if (month >= 1 && month <= 12) {
+      return `${months[month - 1]} ${year}`;
+    }
+  }
+  return monthKey;
 };
 const getAccountBadge = (accId, cuentas = []) => {
   const acc = (cuentas || []).find(c => c && c.id === accId);
@@ -317,7 +332,7 @@ const STORAGE_KEY = 'finanzas_data_v1';
 const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 const defaultFallbackData = {
-  version: '1.0',
+  version: '1.1',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: {
@@ -325,27 +340,51 @@ const defaultFallbackData = {
       ahorro: 0.50,
       gasto: 0.32
     },
-    inversionFija: 60.00
+    inversionFija: 60.00,
+    gastosFijosDefecto: [{
+      nombre: 'Alquiler + Gastos Casa',
+      categoria: 'Alquiler',
+      cuenta: 'acc-santander',
+      importe: 325.00
+    }, {
+      nombre: 'Spotify',
+      categoria: 'Suscripciones',
+      cuenta: 'acc-santander',
+      importe: 6.49
+    }, {
+      nombre: 'Basic Fit',
+      categoria: 'Suscripciones',
+      cuenta: 'acc-santander',
+      importe: 24.99
+    }, {
+      nombre: 'AppleCare+',
+      categoria: 'Suscripciones',
+      cuenta: 'acc-santander',
+      importe: 5.49
+    }]
   },
   cuentas: [{
     id: 'acc-santander',
     nombre: 'Santander',
     tipo: 'banco',
     activa: true,
+    incluirEnTotal: true,
     color: '#DC2626',
-    saldoInicial: -25.47
+    saldoInicial: 145.30
   }, {
     id: 'acc-bbva',
     nombre: 'BBVA',
     tipo: 'banco',
     activa: true,
+    incluirEnTotal: true,
     color: '#1E3A8A',
-    saldoInicial: 121.80
+    saldoInicial: 180.69
   }, {
     id: 'acc-sab-ahorro',
     nombre: 'Sabadell Ahorro',
     tipo: 'banco',
     activa: true,
+    incluirEnTotal: true,
     color: '#0284C7',
     saldoInicial: 1143.97
   }, {
@@ -353,6 +392,7 @@ const defaultFallbackData = {
     nombre: 'Sabadell IRPF',
     tipo: 'banco',
     activa: true,
+    incluirEnTotal: false,
     color: '#0EA5E9',
     saldoInicial: 202.04
   }, {
@@ -360,15 +400,17 @@ const defaultFallbackData = {
     nombre: 'Trade Republic',
     tipo: 'inversion',
     activa: true,
+    incluirEnTotal: true,
     color: '#18181B',
-    saldoInicial: 1031.55
+    saldoInicial: 0.00
   }, {
     id: 'acc-efectivo',
     nombre: 'Efectivo',
     tipo: 'metalico',
     activa: true,
+    incluirEnTotal: true,
     color: '#16A34A',
-    saldoInicial: 335.05
+    saldoInicial: 260.00
   }],
   categorias: [{
     id: 'cat-alquiler',
@@ -483,21 +525,25 @@ const defaultFallbackData = {
   }],
   fuentesIngreso: [{
     id: 'src-claret',
-    nombre: 'Claret'
+    nombre: 'Claret',
+    importeDefecto: 1508.53
   }, {
     id: 'src-maristas',
-    nombre: 'Maristas'
+    nombre: 'Maristas',
+    importeDefecto: 603.39
   }, {
     id: 'src-academia',
-    nombre: 'Academia'
+    nombre: 'Academia',
+    importeDefecto: 346.44
   }, {
     id: 'src-particulares',
-    nombre: 'Clases Particulares'
+    nombre: 'Clases Particulares',
+    importeDefecto: 0.00
   }],
   movimientos: []
 };
 
-// Función robusta para normalizar cualquier objeto (de Firebase o LocalStorage) a arrays válidos
+// Normalizar y ordenar de forma descendente por fecha
 const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
   if (!input || typeof input !== 'object') return fallback;
   const toCleanArray = (val, def = []) => {
@@ -505,17 +551,25 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     if (val && typeof val === 'object') return Object.values(val).filter(Boolean);
     return def;
   };
-  const cuentas = toCleanArray(input.cuentas, fallback.cuentas);
+  const cuentas = toCleanArray(input.cuentas, fallback.cuentas).map(c => ({
+    ...c,
+    incluirEnTotal: c.id === 'acc-sab-irpf' ? c.incluirEnTotal === true : c.incluirEnTotal !== false
+  }));
   const categorias = toCleanArray(input.categorias, fallback.categorias);
   const fuentesIngreso = toCleanArray(input.fuentesIngreso, fallback.fuentesIngreso);
   let movimientos = toCleanArray(input.movimientos, []);
-
-  // Si movimientos viene vacío de Firebase pero el fallback tenía movimientos, conservarlos
   if (movimientos.length === 0 && fallback.movimientos && fallback.movimientos.length > 0) {
     movimientos = fallback.movimientos;
   }
+
+  // Modificación 1: Ordenar estrictamente de más reciente a más antiguo
+  movimientos.sort((a, b) => {
+    const dateComp = (b.fecha || '').localeCompare(a.fecha || '');
+    if (dateComp !== 0) return dateComp;
+    return (b.id || '').localeCompare(a.id || '');
+  });
   return {
-    version: input.version || '1.0',
+    version: input.version || '1.1',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -523,7 +577,8 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
         ahorro: input.config?.repartoSueldo?.ahorro !== undefined ? input.config.repartoSueldo.ahorro : fallback.config.repartoSueldo.ahorro,
         gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
       },
-      inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija
+      inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija,
+      gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto)
     },
     cuentas: cuentas.length > 0 ? cuentas : fallback.cuentas,
     categorias: categorias.length > 0 ? categorias : fallback.categorias,
@@ -597,8 +652,6 @@ const FinanceProvider = ({
       } catch (e) {
         console.error('LocalStorage write error:', e);
       }
-
-      // Sincronizar en segundo plano con Firebase
       if (firebaseUrl && navigator.onLine) {
         setSyncStatus('syncing');
         fetch(firebaseUrl, {
@@ -621,8 +674,6 @@ const FinanceProvider = ({
       return normalized;
     });
   }, [firebaseUrl]);
-
-  // Pull / Sync desde Firebase
   const syncWithCloud = useCallback(async () => {
     if (!firebaseUrl || !navigator.onLine || isSyncingRef.current) return;
     isSyncingRef.current = true;
@@ -636,8 +687,6 @@ const FinanceProvider = ({
           const cloudData = normalizeFinanceData(rawCloud, local);
           const localTime = new Date(local.clientUpdated || 0).getTime();
           const cloudTime = new Date(cloudData.clientUpdated || 0).getTime();
-
-          // Si en la nube hay menos movimientos que en local, actualizar la nube con los locales
           if (local.movimientos.length > cloudData.movimientos.length) {
             fetch(firebaseUrl, {
               method: 'PUT',
@@ -672,17 +721,6 @@ const FinanceProvider = ({
             return local;
           }
         });
-      } else {
-        // Base de datos vacía en Firebase -> inicializar con datos locales
-        await fetch(firebaseUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
-        setLastSyncTime(new Date());
-        setSyncStatus('synced');
       }
     } catch (err) {
       console.warn('Sync error:', err);
@@ -690,9 +728,7 @@ const FinanceProvider = ({
     } finally {
       isSyncingRef.current = false;
     }
-  }, [firebaseUrl, data]);
-
-  // Sincronización reactiva 24/7
+  }, [firebaseUrl]);
   useEffect(() => {
     syncWithCloud();
     const interval = setInterval(syncWithCloud, 30000);
@@ -706,8 +742,6 @@ const FinanceProvider = ({
       window.removeEventListener('focus', handleFocus);
     };
   }, [syncWithCloud]);
-
-  // Acciones sobre Movimientos
   const addMovimiento = mov => {
     const newMov = {
       id: mov.id || `mov-${Date.now()}`,
@@ -739,8 +773,6 @@ const FinanceProvider = ({
       movimientos: (prev.movimientos || []).filter(m => m.id !== id)
     }));
   };
-
-  // Motor de Reparto de Sueldo Automático
   const distribuirSueldo = ({
     fecha,
     incomes,
@@ -757,8 +789,6 @@ const FinanceProvider = ({
     const invAmount = Math.round((inversionFija !== undefined ? inversionFija : 60.00) * 100) / 100;
     const newMovs = [];
     const timestamp = Date.now();
-
-    // 1. Registrar ingresos por fuente
     Object.entries(incomes).forEach(([fuenteId, amount], idx) => {
       const numAmt = parseFloat(amount) || 0;
       if (numAmt > 0) {
@@ -775,8 +805,6 @@ const FinanceProvider = ({
         });
       }
     });
-
-    // 2. Transferencia a Sabadell IRPF (18%)
     if (irpfAmount > 0) {
       newMovs.push({
         id: `mov-${timestamp + 100}`,
@@ -789,8 +817,6 @@ const FinanceProvider = ({
         comentario: `IRPF (${Math.round(irpfPct * 100)}%) a Sabadell IRPF`
       });
     }
-
-    // 3. Transferencia a Sabadell Ahorro (50%)
     if (ahorroAmount > 0) {
       newMovs.push({
         id: `mov-${timestamp + 200}`,
@@ -803,8 +829,6 @@ const FinanceProvider = ({
         comentario: `Ahorro (${Math.round(ahorroPct * 100)}%) a Sabadell Ahorro`
       });
     }
-
-    // 4. Transferencia de Inversión Fija a Trade Republic
     if (invAmount > 0) {
       newMovs.push({
         id: `mov-${timestamp + 300}`,
@@ -846,22 +870,25 @@ const FinanceProvider = ({
       } : c)
     }));
   };
+
+  // Modificación 4: Alternar si una cuenta se incluye en el cálculo del Total
+  const toggleIncluirEnTotal = id => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      cuentas: (prev.cuentas || []).map(c => c.id === id ? {
+        ...c,
+        incluirEnTotal: !c.incluirEnTotal
+      } : c)
+    }));
+  };
   const addCuenta = cuenta => {
     updateAndSyncData(prev => ({
       ...prev,
       cuentas: [...(prev.cuentas || []), {
         ...cuenta,
         id: `acc-${Date.now()}`,
-        activa: true
-      }]
-    }));
-  };
-  const addCategoria = cat => {
-    updateAndSyncData(prev => ({
-      ...prev,
-      categorias: [...(prev.categorias || []), {
-        ...cat,
-        id: `cat-${Date.now()}`
+        activa: true,
+        incluirEnTotal: true
       }]
     }));
   };
@@ -888,7 +915,7 @@ const FinanceProvider = ({
     return false;
   };
 
-  // Cálculo reactivo de saldos individuales y totales
+  // Cálculo reactivo de saldos
   const saldos = useMemo(() => {
     const bal = {};
     (data.cuentas || []).forEach(c => {
@@ -908,14 +935,28 @@ const FinanceProvider = ({
     });
     return bal;
   }, [data.cuentas, data.movimientos]);
-  const totalPatrimonio = useMemo(() => {
+
+  // Modificación 4: Total disponible (solo cuentas con incluirEnTotal !== false)
+  const totalPatrimonioDisponible = useMemo(() => {
+    return (data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
+  }, [data.cuentas, saldos]);
+
+  // Total absoluto (incluyendo Sabadell IRPF)
+  const totalPatrimonioAbsoluto = useMemo(() => {
     return (data.cuentas || []).filter(c => c && c.activa).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
+
+  // Saldo de Sabadell IRPF separado
+  const saldoIrpfSeparado = useMemo(() => {
+    return saldos['acc-sab-irpf'] || 0;
+  }, [saldos]);
   return /*#__PURE__*/React.createElement(FinanceContext.Provider, {
     value: {
       data,
       saldos,
-      totalPatrimonio,
+      totalPatrimonio: totalPatrimonioDisponible,
+      totalPatrimonioAbsoluto,
+      saldoIrpfSeparado,
       syncStatus,
       lastSyncTime,
       firebaseUrl,
@@ -927,8 +968,8 @@ const FinanceProvider = ({
       distribuirSueldo,
       updateConfig,
       toggleCuenta,
+      toggleIncluirEnTotal,
       addCuenta,
-      addCategoria,
       importJsonData,
       resetToOriginalData
     }
@@ -998,7 +1039,7 @@ const Navbar = ({
     icon: 'home'
   }, {
     id: 'sueldo',
-    label: 'Motor Sueldo',
+    label: 'Motor Sueldo & Fijos',
     icon: 'zap'
   }, {
     id: 'movimientos',
@@ -1044,7 +1085,7 @@ const Navbar = ({
 };
 
 // ==========================================
-// 📱 BOTTOM NAVIGATION (Para iPhone 15 / Móviles)
+// 📱 BOTTOM NAVIGATION
 // ==========================================
 const BottomNav = ({
   activeTab,
@@ -1057,7 +1098,7 @@ const BottomNav = ({
     icon: 'home'
   }, {
     id: 'sueldo',
-    label: 'Sueldo',
+    label: 'Motor',
     icon: 'zap'
   }, {
     id: 'new',
@@ -1113,7 +1154,9 @@ const DashboardView = ({
   const {
     data,
     saldos,
-    totalPatrimonio
+    totalPatrimonio,
+    totalPatrimonioAbsoluto,
+    saldoIrpfSeparado
   } = useFinance();
   const currentMonthStats = useMemo(() => {
     const now = new Date();
@@ -1136,6 +1179,8 @@ const DashboardView = ({
       tasaAhorro: ingresos > 0 ? Math.max(0, Math.round((ingresos - gastos) / ingresos * 100)) : 0
     };
   }, [data.movimientos]);
+
+  // Modificación 1: Mostrar los 8 movimientos más recientes
   const recentMovements = useMemo(() => {
     return (data.movimientos || []).slice(0, 8);
   }, [data.movimientos]);
@@ -1151,13 +1196,21 @@ const DashboardView = ({
     className: "relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"
-  }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Neto Consolidado"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Neto Disponible"), /*#__PURE__*/React.createElement("span", {
     className: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200"
-  }, (data.cuentas || []).filter(c => c && c.activa).length, " Cuentas Activas")), /*#__PURE__*/React.createElement("div", {
+  }, (data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).length, " Cuentas Computables")), /*#__PURE__*/React.createElement("div", {
     className: "text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white font-sans"
-  }, formatCurrency(totalPatrimonio)), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-400 mt-1"
-  }, "Calculado en tiempo real desde el histórico íntegro de ", (data.movimientos || []).length, " movimientos")), /*#__PURE__*/React.createElement("div", {
+  }, formatCurrency(totalPatrimonio)), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2.5 flex flex-wrap items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-cyan-950/60 border border-cyan-500/30 text-cyan-200"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full bg-cyan-400"
+  }), "Sabadell IRPF (Separado): ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(saldoIrpfSeparado))), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400"
+  }, "• Total con IRPF: ", /*#__PURE__*/React.createElement("strong", {
+    className: "text-slate-200 font-sans"
+  }, formatCurrency(totalPatrimonioAbsoluto))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-2"
@@ -1203,18 +1256,18 @@ const DashboardView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-slate-950"
-  }), "Distribuir Nómina"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), "Motor de Sueldo & Gastos Fijos"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 px-1"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-bold text-slate-900"
   }, "Tus Cuentas & Saldos"), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-500"
-  }, "Toca para filtrar diario")), /*#__PURE__*/React.createElement("div", {
+  }, "Toca una cuenta para ver sus movimientos")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
   }, (data.cuentas || []).filter(c => c && c.activa).map(c => {
     const saldo = saldos[c.id] || 0;
     const badge = getAccountBadge(c.id, data.cuentas);
-    const pctOfTotal = totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0;
+    const isIrpfExcluded = c.incluirEnTotal === false;
     return /*#__PURE__*/React.createElement("div", {
       key: c.id,
       onClick: () => onSelectAccountFilter(c.id),
@@ -1232,9 +1285,11 @@ const DashboardView = ({
       className: "text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors"
     }, c.nombre), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-medium text-slate-400 capitalize"
-    }, c.tipo))), /*#__PURE__*/React.createElement("span", {
+    }, c.tipo))), isIrpfExcluded ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200"
+    }, "No suma al total") : /*#__PURE__*/React.createElement("span", {
       className: `text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.bgClass}`
-    }, pctOfTotal, "%")), /*#__PURE__*/React.createElement("div", {
+    }, totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0, "%")), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-xs text-slate-400 font-medium"
@@ -1242,22 +1297,6 @@ const DashboardView = ({
       className: `text-xl font-bold font-sans ${saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`
     }, formatCurrency(saldo))));
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-r from-amber-50 to-orange-50/60 border border-amber-200/80 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3.5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm shadow-amber-500/30"
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "zap",
-    className: "w-5 h-5 text-slate-950"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-slate-900"
-  }, "Motor de Reparto de Sueldo Automatizado"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-600"
-  }, "IRPF: ", /*#__PURE__*/React.createElement("strong", null, Math.round((data.config?.repartoSueldo?.irpf || 0.18) * 100), "%"), " (Sabadell IRPF) • Ahorro: ", /*#__PURE__*/React.createElement("strong", null, Math.round((data.config?.repartoSueldo?.ahorro || 0.50) * 100), "%"), " (Sabadell Ahorro) • Inversión fija: ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(data.config?.inversionFija || 60)), " (Trade Republic)"))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setActiveTab('sueldo'),
-    className: "bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm whitespace-nowrap"
-  }, "Ejecutar Reparto →")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between"
@@ -1265,7 +1304,7 @@ const DashboardView = ({
     className: "text-sm font-bold text-slate-900"
   }, "Movimientos Recientes"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, "Últimas transacciones registradas")), /*#__PURE__*/React.createElement("button", {
+  }, "Últimas transacciones registradas (ordenadas por fecha reciente)")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('movimientos'),
     className: "text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
   }, "Ver todos (", (data.movimientos || []).length, ") →")), /*#__PURE__*/React.createElement("div", {
@@ -1296,7 +1335,9 @@ const DashboardView = ({
       className: "text-xs text-slate-400 truncate max-w-[140px] sm:max-w-xs"
     }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 text-[11px] text-slate-400 mt-0.5"
-    }, /*#__PURE__*/React.createElement("span", null, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Origen', " → ", destAcc?.nombre || 'Destino') : isGasto ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Cuenta') : /*#__PURE__*/React.createElement("span", null, destAcc?.nombre || 'Cuenta')))), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-semibold text-slate-600"
+    }, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Origen', " → ", destAcc?.nombre || 'Destino') : isGasto ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Cuenta') : /*#__PURE__*/React.createElement("span", null, destAcc?.nombre || 'Cuenta')))), /*#__PURE__*/React.createElement("div", {
       className: "text-right shrink-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-xs sm:text-sm font-bold font-sans ${isGasto ? 'text-slate-900' : isIngreso ? 'text-emerald-600' : 'text-sky-700'}`
@@ -1305,20 +1346,23 @@ const DashboardView = ({
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO & REPARTO AUTOMÁTICO
+// ⚡ MOTOR DE SUELDO & GASTOS FIJOS (Modificación 2)
 // ==========================================
 const SueldoEngineView = ({
   setActiveTab
 }) => {
   const {
     data,
-    distribuirSueldo
+    distribuirSueldo,
+    addMovimiento
   } = useFinance();
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Modificación 2: Pre-establecer importes por defecto según configuración
   const [incomes, setIncomes] = useState(() => {
     const init = {};
     (data.fuentesIngreso || []).forEach(f => {
-      init[f.id] = '';
+      init[f.id] = f.importeDefecto !== undefined && f.importeDefecto > 0 ? f.importeDefecto.toString() : '';
     });
     return init;
   });
@@ -1328,6 +1372,7 @@ const SueldoEngineView = ({
   const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
   const [distributionResult, setDistributionResult] = useState(null);
+  const [confirmedFixedMsg, setConfirmedFixedMsg] = useState('');
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
   }, [incomes]);
@@ -1370,12 +1415,21 @@ const SueldoEngineView = ({
         fecha,
         preview
       });
-      const resetIncomes = {};
-      (data.fuentesIngreso || []).forEach(f => {
-        resetIncomes[f.id] = '';
-      });
-      setIncomes(resetIncomes);
     }
+  };
+
+  // Modificación 2: Confirmar un gasto fijo de forma ágil bajo demanda
+  const handleQuickRegisterFixedExpense = gastoFijo => {
+    addMovimiento({
+      fecha: fecha,
+      tipo: 'gasto',
+      cuentaOrigen: gastoFijo.cuenta || 'acc-santander',
+      importe: gastoFijo.importe,
+      categoria: gastoFijo.categoria,
+      comentario: gastoFijo.nombre
+    });
+    setConfirmedFixedMsg(`¡Gasto registrado!: ${gastoFijo.nombre} (-${formatCurrency(gastoFijo.importe)})`);
+    setTimeout(() => setConfirmedFixedMsg(''), 4000);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-6 max-w-4xl mx-auto pb-24 md:pb-8"
@@ -1386,21 +1440,26 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-3.5 h-3.5 text-amber-600"
-  }), "Automatización Financiera"), /*#__PURE__*/React.createElement("h2", {
+  }), "Automatización de Nóminas & Gastos Fijos"), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-bold text-slate-900"
-  }, "Motor de Reparto de Nóminas"), /*#__PURE__*/React.createElement("p", {
+  }, "Motor de Nóminas y Gastos Recurrentes"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Registra los ingresos mensuales y genera de forma automática las transferencias a tus cuentas de IRPF, Ahorro e Inversión.")), /*#__PURE__*/React.createElement("div", {
+  }, "Los importes están preestablecidos con tus valores habituales. Modifícalos y actívalos el día que recibas el cobro.")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
-  }, "Fecha nómina:"), /*#__PURE__*/React.createElement("input", {
+  }, "Fecha de aplicación:"), /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: fecha,
     onChange: e => setFecha(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
-  }))), distributionResult && /*#__PURE__*/React.createElement("div", {
-    className: "bg-emerald-50 border border-emerald-200 rounded-2xl p-5 relative"
+  }))), confirmedFixedMsg && /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center justify-between animate-fadeIn"
+  }, /*#__PURE__*/React.createElement("span", null, confirmedFixedMsg), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmedFixedMsg(''),
+    className: "text-emerald-600"
+  }, "×")), distributionResult && /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-50 border border-emerald-200 rounded-2xl p-5 relative animate-fadeIn"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setDistributionResult(null),
     className: "absolute top-4 right-4 text-emerald-700 hover:text-emerald-900 p-1"
@@ -1412,9 +1471,9 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "check",
     className: "w-6 h-6 text-emerald-600"
-  }), "¡Sueldo Distribuido con Éxito en Firebase!"), /*#__PURE__*/React.createElement("p", {
+  }), "¡Nómina y Transferencias Distribuidas en Firebase!"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-emerald-700 mb-3"
-  }, "Se han generado e insertado los movimientos en tu diario de transacciones para la fecha ", formatDate(distributionResult.fecha), "."), /*#__PURE__*/React.createElement("div", {
+  }, "Se han añadido los ingresos y generado las transferencias automáticas para la fecha ", formatDate(distributionResult.fecha), "."), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/70 p-3 rounded-xl border border-emerald-100"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 block"
@@ -1422,22 +1481,17 @@ const SueldoEngineView = ({
     className: "font-bold text-slate-900"
   }, formatCurrency(distributionResult.totalIngreso))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 block"
-  }, "IRPF (Sabadell)"), /*#__PURE__*/React.createElement("span", {
+  }, "IRPF Sabadell"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-cyan-700"
   }, formatCurrency(distributionResult.preview.irpf))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 block"
-  }, "Ahorro (Sabadell)"), /*#__PURE__*/React.createElement("span", {
+  }, "Ahorro Sabadell"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sky-700"
   }, formatCurrency(distributionResult.preview.ahorro))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 block"
   }, "Trade Republic"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-zinc-900"
-  }, formatCurrency(distributionResult.preview.inv)))), /*#__PURE__*/React.createElement("div", {
-    className: "mt-3 flex justify-end"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setActiveTab('movimientos'),
-    className: "text-xs font-semibold text-emerald-800 underline hover:text-emerald-950"
-  }, "Ver transacciones generadas en el Diario →"))), /*#__PURE__*/React.createElement("div", {
+  }, formatCurrency(distributionResult.preview.inv))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-12 gap-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
@@ -1446,7 +1500,7 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "dollar",
     className: "w-4 h-4 text-emerald-600"
-  }), "1. Introduce los Ingresos del Mes"), /*#__PURE__*/React.createElement("div", {
+  }), "1. Nóminas del Mes (Preestablecidas)"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, (data.fuentesIngreso || []).map(fuente => /*#__PURE__*/React.createElement("div", {
     key: fuente.id,
@@ -1469,7 +1523,7 @@ const SueldoEngineView = ({
     className: "pt-3 border-t border-slate-100 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-500 font-medium"
-  }, "Cuenta donde se cobra:"), /*#__PURE__*/React.createElement("select", {
+  }, "Cuenta de ingreso:"), /*#__PURE__*/React.createElement("select", {
     value: cuentaIngreso,
     onChange: e => setCuentaIngreso(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
@@ -1484,7 +1538,7 @@ const SueldoEngineView = ({
     className: "text-3xl font-extrabold mt-1 text-white font-sans"
   }, formatCurrency(totalIngresoCalculado)), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Total Nóminas Registradas"), /*#__PURE__*/React.createElement("div", {
+  }, "Total a distribuir"), /*#__PURE__*/React.createElement("div", {
     className: "mt-5 space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
@@ -1525,11 +1579,36 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-slate-950"
-  }), "Distribuir Sueldo y Generar Transferencias"))));
+  }), "Confirmar y Distribuir Nómina"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "creditCard",
+    className: "w-4 h-4 text-indigo-600"
+  }), "Gastos Fijos & Suscripciones (Activar cuando se cobren)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 mt-0.5"
+  }, "Pulsa en \"Registrar Pago\" el día del mes en que te pasen el cargo bancario para aplicarlo al saldo.")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+  }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    className: "p-3.5 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2.5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-800 block"
+  }, gf.nombre), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, gf.categoria)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pt-2 border-t border-slate-200/60"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-black text-slate-900 font-sans"
+  }, formatCurrency(gf.importe)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => handleQuickRegisterFixedExpense(gf),
+    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow-sm active:scale-95 transition-all"
+  }, "Registrar Pago")))))));
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS & FILTROS
+// 📖 DIARIO DE MOVIMIENTOS & FILTROS (Modificación 1 y 3)
 // ==========================================
 const MovimientosView = ({
   initialAccountFilter,
@@ -1547,6 +1626,8 @@ const MovimientosView = ({
   const [selectedMonth, setSelectedMonth] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
+
+  // Modificación 1 & 3: Meses disponibles en orden descendente con nombres en español
   const availableMonths = useMemo(() => {
     const months = new Set();
     (data.movimientos || []).forEach(m => {
@@ -1556,6 +1637,8 @@ const MovimientosView = ({
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
+
+  // Filtrado reactivo (más recientes arriba)
   const filteredMovimientos = useMemo(() => {
     return (data.movimientos || []).filter(m => {
       if (!m) return false;
@@ -1638,7 +1721,7 @@ const MovimientosView = ({
   }, "📅 Todos los meses"), availableMonths.map(m => /*#__PURE__*/React.createElement("option", {
     key: m,
     value: m
-  }, m))), /*#__PURE__*/React.createElement("select", {
+  }, formatMonthName(m)))), /*#__PURE__*/React.createElement("select", {
     value: selectedType,
     onChange: e => {
       setSelectedType(e.target.value);
@@ -1713,7 +1796,7 @@ const MovimientosView = ({
     }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 text-[11px] text-slate-400 mt-0.5"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "font-medium text-slate-500"
+      className: "font-semibold text-slate-600"
     }, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("strong", {
       className: "text-slate-700"
     }, origAcc?.nombre || 'Origen'), " → ", /*#__PURE__*/React.createElement("strong", {
@@ -1752,7 +1835,7 @@ const MovimientosView = ({
 };
 
 // ==========================================
-// 📈 ANALÍTICA & GRÁFICOS INTERACTIVOS (SVG)
+// 📈 ANALÍTICA & GRÁFICOS (Modificación 3: Meses en español)
 // ==========================================
 const AnaliticaView = () => {
   const {
@@ -1801,7 +1884,7 @@ const AnaliticaView = () => {
     })).sort((a, b) => b.importe - a.importe);
   }, [data.movimientos]);
   const patrimonioEvolution = useMemo(() => {
-    const initialSum = (data.cuentas || []).reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
+    const initialSum = (data.cuentas || []).filter(c => c && c.incluirEnTotal !== false).reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
     let runningTotal = initialSum;
     const history = [];
     const allMonths = Array.from(new Set((data.movimientos || []).map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
@@ -1898,9 +1981,9 @@ const AnaliticaView = () => {
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "trendingUp",
     className: "w-4 h-4 text-blue-600"
-  }), "Evolución del Patrimonio Neto (€)"), /*#__PURE__*/React.createElement("p", {
+  }), "Evolución del Patrimonio Neto Disponible (€)"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, "Curva de crecimiento patrimonial")), lineChartData.points.length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, "Curva de crecimiento patrimonial sin IRPF")), lineChartData.points.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-bold text-slate-900 font-sans"
   }, "Último: ", formatCurrency(lineChartData.points[lineChartData.points.length - 1].total))), /*#__PURE__*/React.createElement("div", {
     className: "w-full overflow-x-auto"
@@ -1965,9 +2048,9 @@ const AnaliticaView = () => {
     y: "210",
     textAnchor: "middle",
     fontSize: "9",
-    fill: "#94a3b8",
+    fill: "#64748b",
     fontWeight: "600"
-  }, p.mes.substring(5))))))), /*#__PURE__*/React.createElement("div", {
+  }, formatMonthName(p.mes).split(' ')[0].substring(0, 3))))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
@@ -1986,7 +2069,7 @@ const AnaliticaView = () => {
       className: "space-y-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between text-xs font-semibold text-slate-700"
-    }, /*#__PURE__*/React.createElement("span", null, m.mes), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, formatMonthName(m.mes)), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] text-slate-400 font-sans"
     }, "+", formatCurrency(m.ingresos), " / -", formatCurrency(m.gastos))), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2 h-3.5 bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-100"
@@ -2029,7 +2112,7 @@ const AnaliticaView = () => {
 };
 
 // ==========================================
-// ⚙️ AJUSTES & GESTIÓN DE FIREBASE
+// ⚙️ AJUSTES & GESTIÓN DE CUENTAS (Modificación 4)
 // ==========================================
 const AjustesView = () => {
   const {
@@ -2041,6 +2124,7 @@ const AjustesView = () => {
     lastSyncTime,
     updateConfig,
     toggleCuenta,
+    toggleIncluirEnTotal,
     importJsonData,
     resetToOriginalData
   } = useFinance();
@@ -2150,6 +2234,37 @@ const AjustesView = () => {
     className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
   }, "Guardar y Conectar")))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Gestión de Cuentas & Cómputo de Total"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 mt-0.5"
+  }, "Configura la visibilidad de cada cuenta y si suma al Patrimonio Neto Disponible.")), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.id,
+    className: "flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100 gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded-full",
+    style: {
+      backgroundColor: c.color
+    }
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-900 block"
+  }, c.nombre), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400 capitalize"
+  }, c.tipo))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 self-end sm:self-auto"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleIncluirEnTotal(c.id),
+    title: "Indica si esta cuenta suma al total de patrimonio disponible",
+    className: `text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${c.incluirEnTotal !== false ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-200 text-slate-500 border-slate-300'}`
+  }, c.incluirEnTotal !== false ? '✓ Suma al Total' : '✕ Excluida del Total'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleCuenta(c.id),
+    className: `text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${c.activa ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-200 text-slate-500 border-transparent'}`
+  }, c.activa ? 'Visible' : 'Oculta')))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-slate-900 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Icon, {
@@ -2198,27 +2313,6 @@ const AjustesView = () => {
     type: "submit",
     className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
   }, "Guardar Porcentajes")))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-slate-900"
-  }, "Visibilidad de Cuentas"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-2"
-  }, (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("div", {
-    key: c.id,
-    className: "flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "w-3 h-3 rounded-full",
-    style: {
-      backgroundColor: c.color
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-slate-900"
-  }, c.nombre)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => toggleCuenta(c.id),
-    className: `text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${c.activa ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-200 text-slate-500 border-transparent'}`
-  }, c.activa ? 'Visible' : 'Oculta'))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-slate-900"
