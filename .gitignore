@@ -1,0 +1,5 @@
+.system_generated/
+__pycache__/
+*.log
+.DS_Store
+Thumbs.db

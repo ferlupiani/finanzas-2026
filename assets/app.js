@@ -1,0 +1,2420 @@
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  createContext,
+  useContext
+} = React;
+
+// ==========================================
+// 🎨 ICONOS SVG MINIMALISTAS (100% Offline & Native)
+// ==========================================
+const Icon = ({
+  name,
+  className = "w-5 h-5",
+  ...props
+}) => {
+  const icons = {
+    wallet: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+    }),
+    creditCard: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M3 10h18M3 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm4 8h2m4 0h4"
+    }),
+    trendingUp: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+    }),
+    arrowUpRight: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M7 17L17 7M17 7H7M17 7V17"
+    }),
+    arrowDownLeft: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M17 7L7 17M7 17H17M7 17V7"
+    }),
+    transfer: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+    }),
+    plus: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M12 4v16m8-8H4"
+    }),
+    trash: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    }),
+    edit: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    }),
+    search: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+    }),
+    filter: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+    }),
+    calendar: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+    }),
+    check: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M5 13l4 4L19 7"
+    }),
+    refresh: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    }),
+    cloud: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"
+    }),
+    cloudOff: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+    }),
+    settings: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+    }),
+    chart: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+    }),
+    home: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+    }),
+    zap: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M13 10V3L4 14h7v7l9-11h-7z"
+    }),
+    download: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    }),
+    upload: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+    }),
+    x: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M6 18L18 6M6 6l12 12"
+    }),
+    pieChart: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+    }),
+    dollar: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    }),
+    users: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+    })
+  };
+  return /*#__PURE__*/React.createElement("svg", {
+    className: className,
+    fill: "none",
+    viewBox: "0 0 24 24",
+    stroke: "currentColor",
+    ...props
+  }, icons[name] || icons.wallet);
+};
+
+// ==========================================
+// 💶 UTILIDADES DE FORMATO & CUENTAS
+// ==========================================
+const formatCurrency = val => {
+  const num = typeof val === 'number' ? val : parseFloat(val) || 0;
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num);
+};
+const formatDate = dateStr => {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+};
+const getAccountBadge = (accId, cuentas) => {
+  const acc = cuentas.find(c => c.id === accId);
+  if (!acc) return {
+    nombre: 'Desconocida',
+    color: '#64748b',
+    bgClass: 'bg-slate-100 text-slate-700 border-slate-200'
+  };
+  switch (acc.id) {
+    case 'acc-santander':
+      return {
+        ...acc,
+        bgClass: 'bg-red-50 text-red-700 border-red-200'
+      };
+    case 'acc-bbva':
+      return {
+        ...acc,
+        bgClass: 'bg-blue-50 text-blue-900 border-blue-200'
+      };
+    case 'acc-sab-ahorro':
+      return {
+        ...acc,
+        bgClass: 'bg-sky-50 text-sky-700 border-sky-200'
+      };
+    case 'acc-sab-irpf':
+      return {
+        ...acc,
+        bgClass: 'bg-cyan-50 text-cyan-800 border-cyan-200'
+      };
+    case 'acc-trade':
+      return {
+        ...acc,
+        bgClass: 'bg-zinc-100 text-zinc-900 border-zinc-300'
+      };
+    case 'acc-efectivo':
+      return {
+        ...acc,
+        bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      };
+    default:
+      return {
+        ...acc,
+        bgClass: 'bg-slate-100 text-slate-800 border-slate-200'
+      };
+  }
+};
+
+// ==========================================
+// 🌐 CONTEXTO GLOBAL & SINCRONIZACIÓN FIREBASE
+// ==========================================
+const FinanceContext = createContext(null);
+const STORAGE_KEY = 'finanzas_data_v1';
+const FIREBASE_URL_KEY = 'finanzas_firebase_url';
+const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
+const defaultFallbackData = {
+  version: '1.0',
+  clientUpdated: new Date().toISOString(),
+  config: {
+    repartoSueldo: {
+      irpf: 0.18,
+      ahorro: 0.50,
+      gasto: 0.32
+    },
+    inversionFija: 60.00
+  },
+  cuentas: [{
+    id: 'acc-santander',
+    nombre: 'Santander',
+    tipo: 'banco',
+    activa: true,
+    color: '#DC2626',
+    saldoInicial: -25.47
+  }, {
+    id: 'acc-bbva',
+    nombre: 'BBVA',
+    tipo: 'banco',
+    activa: true,
+    color: '#1E3A8A',
+    saldoInicial: 121.80
+  }, {
+    id: 'acc-sab-ahorro',
+    nombre: 'Sabadell Ahorro',
+    tipo: 'banco',
+    activa: true,
+    color: '#0284C7',
+    saldoInicial: 1143.97
+  }, {
+    id: 'acc-sab-irpf',
+    nombre: 'Sabadell IRPF',
+    tipo: 'banco',
+    activa: true,
+    color: '#0EA5E9',
+    saldoInicial: 202.04
+  }, {
+    id: 'acc-trade',
+    nombre: 'Trade Republic',
+    tipo: 'inversion',
+    activa: true,
+    color: '#18181B',
+    saldoInicial: 1031.55
+  }, {
+    id: 'acc-efectivo',
+    nombre: 'Efectivo',
+    tipo: 'metalico',
+    activa: true,
+    color: '#16A34A',
+    saldoInicial: 335.05
+  }],
+  categorias: [{
+    id: 'cat-alquiler',
+    nombre: 'Alquiler',
+    tipo: 'gasto',
+    color: '#ef4444'
+  }, {
+    id: 'cat-comida',
+    nombre: 'Comida',
+    tipo: 'gasto',
+    color: '#f97316'
+  }, {
+    id: 'cat-comer-fuera',
+    nombre: 'Comer Fuera',
+    tipo: 'gasto',
+    color: '#eab308'
+  }, {
+    id: 'cat-cervezas',
+    nombre: 'Cervezas',
+    tipo: 'gasto',
+    color: '#84cc16'
+  }, {
+    id: 'cat-carnet',
+    nombre: 'Carnet de Conducir',
+    tipo: 'gasto',
+    color: '#06b6d4'
+  }, {
+    id: 'cat-suscripciones',
+    nombre: 'Suscripciones',
+    tipo: 'gasto',
+    color: '#6366f1'
+  }, {
+    id: 'cat-planes',
+    nombre: 'Planes',
+    tipo: 'gasto',
+    color: '#a855f7'
+  }, {
+    id: 'cat-regalos',
+    nombre: 'Regalos',
+    tipo: 'gasto',
+    color: '#ec4899'
+  }, {
+    id: 'cat-ropa',
+    nombre: 'Ropa',
+    tipo: 'gasto',
+    color: '#f43f5e'
+  }, {
+    id: 'cat-inversiones',
+    nombre: 'Inversiones',
+    tipo: 'gasto',
+    color: '#10b981'
+  }, {
+    id: 'cat-universidad',
+    'nombre': 'Universidad',
+    tipo: 'gasto',
+    color: '#3b82f6'
+  }, {
+    id: 'cat-utilidad',
+    nombre: 'Utilidad',
+    tipo: 'gasto',
+    color: '#64748b'
+  }, {
+    id: 'cat-viajes',
+    nombre: 'Viajes',
+    tipo: 'gasto',
+    color: '#14b8a6'
+  }, {
+    id: 'cat-fisio',
+    nombre: 'Fisio',
+    tipo: 'gasto',
+    color: '#d946ef'
+  }, {
+    id: 'cat-caprichos',
+    nombre: 'Caprichos',
+    tipo: 'gasto',
+    color: '#f59e0b'
+  }, {
+    id: 'cat-compartida',
+    nombre: 'Cuenta compartida',
+    tipo: 'gasto',
+    color: '#8b5cf6'
+  }, {
+    id: 'cat-sueldo',
+    nombre: 'Sueldo/Nómina',
+    tipo: 'ingreso',
+    color: '#10b981'
+  }, {
+    id: 'cat-clases',
+    nombre: 'Clases Particulares',
+    tipo: 'ingreso',
+    color: '#059669'
+  }, {
+    id: 'cat-bizum-madre',
+    nombre: 'Bizum Madre',
+    tipo: 'ingreso',
+    color: '#db2777'
+  }, {
+    id: 'cat-ventas',
+    nombre: 'Ventas',
+    tipo: 'ingreso',
+    color: '#0284c7'
+  }, {
+    id: 'cat-otros-gastos',
+    nombre: 'Otros Gastos',
+    tipo: 'gasto',
+    color: '#64748b'
+  }, {
+    id: 'cat-otros-ingresos',
+    nombre: 'Otros Ingresos',
+    tipo: 'ingreso',
+    color: '#10b981'
+  }],
+  fuentesIngreso: [{
+    id: 'src-claret',
+    nombre: 'Claret'
+  }, {
+    id: 'src-maristas',
+    nombre: 'Maristas'
+  }, {
+    id: 'src-academia',
+    nombre: 'Academia'
+  }, {
+    id: 'src-particulares',
+    nombre: 'Clases Particulares'
+  }],
+  movimientos: []
+};
+const FinanceProvider = ({
+  children
+}) => {
+  const [data, setData] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.movimientos && parsed.movimientos.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading from localStorage:', e);
+    }
+    return defaultFallbackData;
+  });
+  const [firebaseUrl, setFirebaseUrlState] = useState(() => {
+    return localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
+  });
+
+  // syncStatus: 'synced' | 'syncing' | 'offline' | 'error'
+  const [syncStatus, setSyncStatus] = useState('offline');
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const isSyncingRef = useRef(false);
+
+  // Carga inicial desde data.json si el localStorage está vacío o incompleto
+  useEffect(() => {
+    const loadInitialDataFile = async () => {
+      try {
+        const res = await fetch('data.json');
+        if (res.ok) {
+          const jsonFile = await res.json();
+          setData(current => {
+            if (!current.movimientos || current.movimientos.length === 0 || jsonFile.clientUpdated > current.clientUpdated) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonFile));
+              return jsonFile;
+            }
+            return current;
+          });
+        }
+      } catch (err) {
+        console.log('No external data.json found, using local storage.');
+      }
+    };
+    loadInitialDataFile();
+  }, []);
+
+  // Actualizar Firebase URL
+  const setFirebaseUrl = url => {
+    setFirebaseUrlState(url);
+    if (url) {
+      localStorage.setItem(FIREBASE_URL_KEY, url);
+    } else {
+      localStorage.removeItem(FIREBASE_URL_KEY);
+    }
+  };
+
+  // Función para guardar cambios locales y sincronizar inmediatamente con Firebase
+  const updateAndSyncData = useCallback(async updater => {
+    setData(prev => {
+      const nextData = typeof updater === 'function' ? updater(prev) : updater;
+      const updatedData = {
+        ...nextData,
+        clientUpdated: new Date().toISOString()
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+      } catch (e) {
+        console.error('LocalStorage write error:', e);
+      }
+
+      // Sincronizar en segundo plano con Firebase
+      if (firebaseUrl && navigator.onLine) {
+        setSyncStatus('syncing');
+        fetch(firebaseUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatedData)
+        }).then(res => {
+          if (res.ok) {
+            setSyncStatus('synced');
+            setLastSyncTime(new Date());
+          } else {
+            setSyncStatus('error');
+          }
+        }).catch(() => setSyncStatus('error'));
+      } else {
+        setSyncStatus('offline');
+      }
+      return updatedData;
+    });
+  }, [firebaseUrl]);
+
+  // Pull / Sync desde Firebase
+  const syncWithCloud = useCallback(async () => {
+    if (!firebaseUrl || !navigator.onLine || isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(firebaseUrl);
+      if (!res.ok) throw new Error('Firebase HTTP error');
+      const cloudData = await res.json();
+      if (cloudData && cloudData.version) {
+        setData(local => {
+          const localTime = new Date(local.clientUpdated || 0).getTime();
+          const cloudTime = new Date(cloudData.clientUpdated || 0).getTime();
+          if (cloudTime > localTime) {
+            // Nube es más reciente -> actualizar local
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+            setLastSyncTime(new Date());
+            setSyncStatus('synced');
+            return cloudData;
+          } else if (localTime > cloudTime) {
+            // Local es más reciente -> subir a la nube
+            fetch(firebaseUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(local)
+            }).then(() => {
+              setLastSyncTime(new Date());
+              setSyncStatus('synced');
+            });
+            return local;
+          } else {
+            setLastSyncTime(new Date());
+            setSyncStatus('synced');
+            return local;
+          }
+        });
+      } else {
+        // Base de datos vacía en Firebase -> inicializar con datos locales
+        await fetch(firebaseUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        setLastSyncTime(new Date());
+        setSyncStatus('synced');
+      }
+    } catch (err) {
+      console.warn('Sync error:', err);
+      setSyncStatus('error');
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, [firebaseUrl, data]);
+
+  // Sincronización reactiva 24/7 (polling cada 30s + focus + online)
+  useEffect(() => {
+    syncWithCloud();
+    const interval = setInterval(syncWithCloud, 30000);
+    const handleOnline = () => syncWithCloud();
+    const handleFocus = () => syncWithCloud();
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [syncWithCloud]);
+
+  // Acciones sobre Movimientos
+  const addMovimiento = mov => {
+    const newMov = {
+      id: mov.id || `mov-${Date.now()}`,
+      fecha: mov.fecha || new Date().toISOString().split('T')[0],
+      tipo: mov.tipo,
+      // 'gasto' | 'ingreso' | 'transferencia'
+      cuentaOrigen: mov.cuentaOrigen || '',
+      cuentaDestino: mov.cuentaDestino || '',
+      importe: Math.abs(parseFloat(mov.importe) || 0),
+      categoria: mov.categoria || '',
+      comentario: mov.comentario || ''
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      movimientos: [newMov, ...prev.movimientos]
+    }));
+  };
+  const updateMovimiento = (id, updatedFields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      movimientos: prev.movimientos.map(m => m.id === id ? {
+        ...m,
+        ...updatedFields
+      } : m)
+    }));
+  };
+  const deleteMovimiento = id => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      movimientos: prev.movimientos.filter(m => m.id !== id)
+    }));
+  };
+
+  // Motor de Reparto de Sueldo Automático
+  const distribuirSueldo = ({
+    fecha,
+    incomes,
+    irpfPct,
+    ahorroPct,
+    gastoPct,
+    inversionFija,
+    cuentaIngreso = 'acc-santander'
+  }) => {
+    const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    if (totalIngreso <= 0) return false;
+    const irpfAmount = Math.round(totalIngreso * (irpfPct || 0.18) * 100) / 100;
+    const ahorroAmount = Math.round(totalIngreso * (ahorroPct || 0.50) * 100) / 100;
+    const invAmount = Math.round((inversionFija !== undefined ? inversionFija : 60.00) * 100) / 100;
+    const newMovs = [];
+    const timestamp = Date.now();
+
+    // 1. Registrar los ingresos de cada nómina
+    Object.entries(incomes).forEach(([fuenteId, amount], idx) => {
+      const numAmt = parseFloat(amount) || 0;
+      if (numAmt > 0) {
+        const fuenteObj = data.fuentesIngreso.find(f => f.id === fuenteId);
+        const nombreFuente = fuenteObj ? fuenteObj.nombre : fuenteId;
+        newMovs.push({
+          id: `mov-${timestamp + idx * 10}`,
+          fecha: fecha,
+          tipo: 'ingreso',
+          cuentaDestino: cuentaIngreso,
+          importe: numAmt,
+          categoria: 'Sueldo/Nómina',
+          comentario: `Nómina ${nombreFuente}`
+        });
+      }
+    });
+
+    // 2. Transferencia a Sabadell IRPF (18%)
+    if (irpfAmount > 0) {
+      newMovs.push({
+        id: `mov-${timestamp + 100}`,
+        fecha: fecha,
+        tipo: 'transferencia',
+        cuentaOrigen: cuentaIngreso,
+        cuentaDestino: 'acc-sab-irpf',
+        importe: irpfAmount,
+        categoria: 'Reparto Sueldo',
+        comentario: `IRPF (${Math.round(irpfPct * 100)}%) a Sabadell IRPF`
+      });
+    }
+
+    // 3. Transferencia a Sabadell Ahorro (50%)
+    if (ahorroAmount > 0) {
+      newMovs.push({
+        id: `mov-${timestamp + 200}`,
+        fecha: fecha,
+        tipo: 'transferencia',
+        cuentaOrigen: cuentaIngreso,
+        cuentaDestino: 'acc-sab-ahorro',
+        importe: ahorroAmount,
+        categoria: 'Reparto Sueldo',
+        comentario: `Ahorro (${Math.round(ahorroPct * 100)}%) a Sabadell Ahorro`
+      });
+    }
+
+    // 4. Transferencia de Inversión Fija a Trade Republic
+    if (invAmount > 0) {
+      newMovs.push({
+        id: `mov-${timestamp + 300}`,
+        fecha: fecha,
+        tipo: 'transferencia',
+        cuentaOrigen: cuentaIngreso,
+        cuentaDestino: 'acc-trade',
+        importe: invAmount,
+        categoria: 'Inversiones',
+        comentario: 'Inversión mensual fija'
+      });
+    }
+    updateAndSyncData(prev => ({
+      ...prev,
+      movimientos: [...newMovs, ...prev.movimientos]
+    }));
+    return {
+      totalIngreso,
+      irpfAmount,
+      ahorroAmount,
+      invAmount
+    };
+  };
+  const updateConfig = newConfig => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        ...newConfig
+      }
+    }));
+  };
+  const toggleCuenta = id => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      cuentas: prev.cuentas.map(c => c.id === id ? {
+        ...c,
+        activa: !c.activa
+      } : c)
+    }));
+  };
+  const addCuenta = cuenta => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      cuentas: [...prev.cuentas, {
+        ...cuenta,
+        id: `acc-${Date.now()}`,
+        activa: true
+      }]
+    }));
+  };
+  const addCategoria = cat => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      categorias: [...prev.categorias, {
+        ...cat,
+        id: `cat-${Date.now()}`
+      }]
+    }));
+  };
+  const importJsonData = newJson => {
+    if (newJson && newJson.movimientos && Array.isArray(newJson.movimientos)) {
+      updateAndSyncData(newJson);
+      return true;
+    }
+    return false;
+  };
+  const resetToOriginalData = async () => {
+    try {
+      const res = await fetch('data.json');
+      if (res.ok) {
+        const json = await res.json();
+        updateAndSyncData(json);
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return false;
+  };
+
+  // Cálculo reactivo de saldos individuales y totales
+  const saldos = useMemo(() => {
+    const bal = {};
+    data.cuentas.forEach(c => {
+      bal[c.id] = c.saldoInicial || 0.0;
+    });
+    data.movimientos.forEach(m => {
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'gasto') {
+        if (bal[m.cuentaOrigen] !== undefined) bal[m.cuentaOrigen] -= imp;
+      } else if (m.tipo === 'ingreso') {
+        if (bal[m.cuentaDestino] !== undefined) bal[m.cuentaDestino] += imp;
+      } else if (m.tipo === 'transferencia') {
+        if (bal[m.cuentaOrigen] !== undefined) bal[m.cuentaOrigen] -= imp;
+        if (bal[m.cuentaDestino] !== undefined) bal[m.cuentaDestino] += imp;
+      }
+    });
+    return bal;
+  }, [data.cuentas, data.movimientos]);
+  const totalPatrimonio = useMemo(() => {
+    return data.cuentas.filter(c => c.activa).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
+  }, [data.cuentas, saldos]);
+  return /*#__PURE__*/React.createElement(FinanceContext.Provider, {
+    value: {
+      data,
+      saldos,
+      totalPatrimonio,
+      syncStatus,
+      lastSyncTime,
+      firebaseUrl,
+      setFirebaseUrl,
+      syncNow: syncWithCloud,
+      addMovimiento,
+      updateMovimiento,
+      deleteMovimiento,
+      distribuirSueldo,
+      updateConfig,
+      toggleCuenta,
+      addCuenta,
+      addCategoria,
+      importJsonData,
+      resetToOriginalData
+    }
+  }, children);
+};
+const useFinance = () => useContext(FinanceContext);
+
+// ==========================================
+// 🧭 NAVBAR & SYNC STATUS BADGE
+// ==========================================
+const Navbar = ({
+  activeTab,
+  setActiveTab,
+  onOpenNewModal
+}) => {
+  const {
+    syncStatus,
+    syncNow
+  } = useFinance();
+  const syncInfo = {
+    synced: {
+      text: 'Conectado',
+      color: 'bg-emerald-500',
+      pill: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    },
+    syncing: {
+      text: 'Sincronizando...',
+      color: 'bg-blue-500 animate-pulse',
+      pill: 'bg-blue-50 text-blue-700 border-blue-200'
+    },
+    offline: {
+      text: 'Modo Local',
+      color: 'bg-amber-500',
+      pill: 'bg-amber-50 text-amber-700 border-amber-200'
+    },
+    error: {
+      text: 'Sin Conexión',
+      color: 'bg-rose-500',
+      pill: 'bg-rose-50 text-rose-700 border-rose-200'
+    }
+  }[syncStatus] || {
+    text: 'Offline',
+    color: 'bg-slate-400',
+    pill: 'bg-slate-50 text-slate-600 border-slate-200'
+  };
+  return /*#__PURE__*/React.createElement("header", {
+    className: "sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-7xl mx-auto flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-white shadow-sm shadow-slate-200"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "wallet",
+    className: "w-5 h-5 text-white"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+    className: "text-base font-bold tracking-tight text-slate-900 leading-tight"
+  }, "Finanzas 2026"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 font-medium"
+  }, "Patrimonio & Reparto"))), /*#__PURE__*/React.createElement("nav", {
+    className: "hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60"
+  }, [{
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: 'home'
+  }, {
+    id: 'sueldo',
+    label: 'Motor Sueldo',
+    icon: 'zap'
+  }, {
+    id: 'movimientos',
+    label: 'Movimientos',
+    icon: 'creditCard'
+  }, {
+    id: 'analitica',
+    label: 'Analítica',
+    icon: 'chart'
+  }, {
+    id: 'ajustes',
+    label: 'Ajustes',
+    icon: 'settings'
+  }].map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.id,
+    onClick: () => setActiveTab(tab.id),
+    className: `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm shadow-slate-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: tab.icon,
+    className: "w-4 h-4"
+  }), tab.label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: syncNow,
+    title: "Pulsar para forzar sincronización",
+    className: `flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${syncInfo.pill}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `w-2 h-2 rounded-full ${syncInfo.color}`
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, syncInfo.text), /*#__PURE__*/React.createElement(Icon, {
+    name: "refresh",
+    className: "w-3.5 h-3.5 opacity-70"
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenNewModal,
+    className: "flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    className: "w-4 h-4"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, "Nuevo")))));
+};
+
+// ==========================================
+// 📱 BOTTOM NAVIGATION (Para iPhone 15 / Móviles)
+// ==========================================
+const BottomNav = ({
+  activeTab,
+  setActiveTab,
+  onOpenNewModal
+}) => {
+  const tabs = [{
+    id: 'dashboard',
+    label: 'Inicio',
+    icon: 'home'
+  }, {
+    id: 'sueldo',
+    label: 'Sueldo',
+    icon: 'zap'
+  }, {
+    id: 'new',
+    label: '',
+    icon: 'plus',
+    isAction: true
+  }, {
+    id: 'movimientos',
+    label: 'Diario',
+    icon: 'creditCard'
+  }, {
+    id: 'analitica',
+    label: 'Gráficos',
+    icon: 'chart'
+  }];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-around"
+  }, tabs.map(t => {
+    if (t.isAction) {
+      return /*#__PURE__*/React.createElement("button", {
+        key: "btn-action",
+        onClick: onOpenNewModal,
+        className: "w-12 h-12 -mt-5 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-900/30 active:scale-90 transition-transform"
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "plus",
+        className: "w-6 h-6"
+      }));
+    }
+    const isActive = activeTab === t.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: t.id,
+      onClick: () => setActiveTab(t.id),
+      className: `flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-colors ${isActive ? 'text-slate-900 font-bold' : 'text-slate-400 hover:text-slate-600'}`
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: t.icon,
+      className: `w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] mt-0.5"
+    }, t.label));
+  })));
+};
+
+// ==========================================
+// 📊 DASHBOARD PRINCIPAL
+// ==========================================
+const DashboardView = ({
+  setActiveTab,
+  onOpenNewModal,
+  onSelectAccountFilter
+}) => {
+  const {
+    data,
+    saldos,
+    totalPatrimonio
+  } = useFinance();
+
+  // Estadísticas del mes en curso
+  const currentMonthStats = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const monthPrefix = `${currentYear}-${currentMonth}`;
+    let ingresos = 0;
+    let gastos = 0;
+    data.movimientos.forEach(m => {
+      if (m.fecha && m.fecha.startsWith(monthPrefix)) {
+        const imp = parseFloat(m.importe) || 0;
+        if (m.tipo === 'ingreso') ingresos += imp;
+        if (m.tipo === 'gasto') gastos += imp;
+      }
+    });
+    return {
+      ingresos,
+      gastos,
+      balance: ingresos - gastos,
+      tasaAhorro: ingresos > 0 ? Math.max(0, Math.round((ingresos - gastos) / ingresos * 100)) : 0
+    };
+  }, [data.movimientos]);
+
+  // Últimos 8 movimientos
+  const recentMovements = useMemo(() => {
+    return data.movimientos.slice(0, 8);
+  }, [data.movimientos]);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6 pb-24 md:pb-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white p-6 sm:p-8 shadow-xl shadow-slate-900/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"
+  }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Neto Consolidado"), /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200"
+  }, data.cuentas.filter(c => c.activa).length, " Cuentas Activas")), /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white font-sans"
+  }, formatCurrency(totalPatrimonio)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400 mt-1"
+  }, "Calculado en tiempo real desde el histórico íntegro de ", data.movimientos.length, " movimientos")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400 block font-medium"
+  }, "Ingresos Mes"), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm sm:text-base font-bold text-emerald-400 font-sans"
+  }, "+", formatCurrency(currentMonthStats.ingresos))), /*#__PURE__*/React.createElement("div", {
+    className: "p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400 block font-medium"
+  }, "Gastos Mes"), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm sm:text-base font-bold text-rose-400 font-sans"
+  }, "-", formatCurrency(currentMonthStats.gastos))), /*#__PURE__*/React.createElement("div", {
+    className: "p-2 col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-white/10 pt-2 sm:pt-0 sm:pl-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400 block font-medium"
+  }, "Ahorro Estimado"), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm sm:text-base font-bold text-sky-300"
+  }, currentMonthStats.tasaAhorro, "%")))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onOpenNewModal('gasto'),
+    className: "flex items-center gap-1.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "arrowUpRight",
+    className: "w-3.5 h-3.5 text-rose-400"
+  }), "+ Añadir Gasto"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onOpenNewModal('ingreso'),
+    className: "flex items-center gap-1.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "arrowDownLeft",
+    className: "w-3.5 h-3.5 text-emerald-400"
+  }), "+ Registrar Ingreso"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onOpenNewModal('transferencia'),
+    className: "flex items-center gap-1.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "transfer",
+    className: "w-3.5 h-3.5 text-sky-400"
+  }), "⇄ Transferir"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setActiveTab('sueldo'),
+    className: "flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 ml-auto"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "zap",
+    className: "w-4 h-4 text-slate-950"
+  }), "Distribuir Nómina"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-3 px-1"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-bold text-slate-900"
+  }, "Tus Cuentas & Saldos"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-500"
+  }, "Toca para filtrar diario")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  }, data.cuentas.filter(c => c.activa).map(c => {
+    const saldo = saldos[c.id] || 0;
+    const badge = getAccountBadge(c.id, data.cuentas);
+    const pctOfTotal = totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: c.id,
+      onClick: () => onSelectAccountFilter(c.id),
+      className: "group relative bg-white hover:bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-3.5 h-3.5 rounded-full ring-4 ring-slate-100",
+      style: {
+        backgroundColor: c.color
+      }
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+      className: "text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors"
+    }, c.nombre), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-medium text-slate-400 capitalize"
+    }, c.tipo))), /*#__PURE__*/React.createElement("span", {
+      className: `text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.bgClass}`
+    }, pctOfTotal, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-slate-400 font-medium"
+    }, "Saldo disponible"), /*#__PURE__*/React.createElement("span", {
+      className: `text-xl font-bold font-sans ${saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`
+    }, formatCurrency(saldo))));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-amber-50 to-orange-50/60 border border-amber-200/80 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm shadow-amber-500/30"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "zap",
+    className: "w-5 h-5 text-slate-950"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Motor de Reparto de Sueldo Automatizado"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-600"
+  }, "IRPF: ", /*#__PURE__*/React.createElement("strong", null, Math.round(data.config.repartoSueldo.irpf * 100), "%"), " (Sabadell IRPF) • Ahorro: ", /*#__PURE__*/React.createElement("strong", null, Math.round(data.config.repartoSueldo.ahorro * 100), "%"), " (Sabadell Ahorro) • Inversión fija: ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(data.config.inversionFija)), " (Trade Republic)"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setActiveTab('sueldo'),
+    className: "bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm whitespace-nowrap"
+  }, "Ejecutar Reparto →")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Movimientos Recientes"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Últimas transacciones registradas")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setActiveTab('movimientos'),
+    className: "text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+  }, "Ver todos (", data.movimientos.length, ") →")), /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-slate-100"
+  }, recentMovements.map(m => {
+    const isGasto = m.tipo === 'gasto';
+    const isIngreso = m.tipo === 'ingreso';
+    const isTransfer = m.tipo === 'transferencia';
+    const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
+    const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      className: "p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGasto ? 'bg-rose-50 text-rose-600' : isIngreso ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-sky-600'}`
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer',
+      className: "w-4 h-4"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs sm:text-sm font-bold text-slate-900 truncate"
+    }, m.categoria || (isTransfer ? 'Transferencia' : 'General')), m.comentario && /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-slate-400 truncate max-w-[140px] sm:max-w-xs"
+    }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 text-[11px] text-slate-400 mt-0.5"
+    }, /*#__PURE__*/React.createElement("span", null, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Origen', " → ", destAcc?.nombre || 'Destino') : isGasto ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Cuenta') : /*#__PURE__*/React.createElement("span", null, destAcc?.nombre || 'Cuenta')))), /*#__PURE__*/React.createElement("div", {
+      className: "text-right shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-xs sm:text-sm font-bold font-sans ${isGasto ? 'text-slate-900' : isIngreso ? 'text-emerald-600' : 'text-sky-700'}`
+    }, isGasto ? `-${formatCurrency(m.importe)}` : isIngreso ? `+${formatCurrency(m.importe)}` : `⇄ ${formatCurrency(m.importe)}`)));
+  }))));
+};
+
+// ==========================================
+// ⚡ MOTOR DE SUELDO & REPARTO AUTOMÁTICO
+// ==========================================
+const SueldoEngineView = ({
+  setActiveTab
+}) => {
+  const {
+    data,
+    distribuirSueldo,
+    updateConfig
+  } = useFinance();
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [incomes, setIncomes] = useState(() => {
+    const init = {};
+    data.fuentesIngreso.forEach(f => {
+      init[f.id] = '';
+    });
+    return init;
+  });
+  const [irpfPct, setIrpfPct] = useState(data.config.repartoSueldo.irpf);
+  const [ahorroPct, setAhorroPct] = useState(data.config.repartoSueldo.ahorro);
+  const [gastoPct, setGastoPct] = useState(data.config.repartoSueldo.gasto);
+  const [inversionFija, setInversionFija] = useState(data.config.inversionFija);
+  const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
+  const [distributionResult, setDistributionResult] = useState(null);
+
+  // Cálculo en vivo
+  const totalIngresoCalculado = useMemo(() => {
+    return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+  }, [incomes]);
+  const preview = useMemo(() => {
+    const irpf = Math.round(totalIngresoCalculado * irpfPct * 100) / 100;
+    const ahorro = Math.round(totalIngresoCalculado * ahorroPct * 100) / 100;
+    const inv = Math.min(totalIngresoCalculado, inversionFija || 60.00);
+    const gasto = Math.max(0, Math.round((totalIngresoCalculado - irpf - ahorro - inv) * 100) / 100);
+    return {
+      irpf,
+      ahorro,
+      inv,
+      gasto
+    };
+  }, [totalIngresoCalculado, irpfPct, ahorroPct, inversionFija]);
+  const handleIncomeChange = (fuenteId, val) => {
+    setIncomes(prev => ({
+      ...prev,
+      [fuenteId]: val
+    }));
+  };
+  const handleExecuteDistribution = e => {
+    e.preventDefault();
+    if (totalIngresoCalculado <= 0) {
+      alert('Por favor, introduce al menos un importe de nómina o ingreso.');
+      return;
+    }
+    const result = distribuirSueldo({
+      fecha,
+      incomes,
+      irpfPct,
+      ahorroPct,
+      gastoPct,
+      inversionFija,
+      cuentaIngreso
+    });
+    if (result) {
+      setDistributionResult({
+        ...result,
+        fecha,
+        preview
+      });
+      // Limpiar importes
+      const resetIncomes = {};
+      data.fuentesIngreso.forEach(f => {
+        resetIncomes[f.id] = '';
+      });
+      setIncomes(resetIncomes);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6 max-w-4xl mx-auto pb-24 md:pb-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 mb-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "zap",
+    className: "w-3.5 h-3.5 text-amber-600"
+  }), "Automatización Financiera"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-bold text-slate-900"
+  }, "Motor de Reparto de Nóminas"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 mt-0.5"
+  }, "Registra los ingresos mensuales y genera de forma automática las transferencias a tus cuentas de IRPF, Ahorro e Inversión.")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400"
+  }, "Fecha nómina:"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: fecha,
+    onChange: e => setFecha(e.target.value),
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+  }))), distributionResult && /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-50 border border-emerald-200 rounded-2xl p-5 relative"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDistributionResult(null),
+    className: "absolute top-4 right-4 text-emerald-700 hover:text-emerald-900 p-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "x",
+    className: "w-5 h-5"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 text-emerald-800 font-bold text-base mb-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "check",
+    className: "w-6 h-6 text-emerald-600"
+  }), "¡Sueldo Distribuido con Éxito en Firebase!"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-emerald-700 mb-3"
+  }, "Se han generado e insertado los movimientos en tu diario de transacciones para la fecha ", formatDate(distributionResult.fecha), "."), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/70 p-3 rounded-xl border border-emerald-100"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 block"
+  }, "Total Nóminas"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-900"
+  }, formatCurrency(distributionResult.totalIngreso))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 block"
+  }, "IRPF (Sabadell)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-cyan-700"
+  }, formatCurrency(distributionResult.preview.irpf))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 block"
+  }, "Ahorro (Sabadell)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-sky-700"
+  }, formatCurrency(distributionResult.preview.ahorro))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 block"
+  }, "Trade Republic"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-zinc-900"
+  }, formatCurrency(distributionResult.preview.inv)))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 flex justify-end"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setActiveTab('movimientos'),
+    className: "text-xs font-semibold text-emerald-800 underline hover:text-emerald-950"
+  }, "Ver transacciones generadas en el Diario →"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-12 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "dollar",
+    className: "w-4 h-4 text-emerald-600"
+  }), "1. Introduce los Ingresos del Mes"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, data.fuentesIngreso.map(fuente => /*#__PURE__*/React.createElement("div", {
+    key: fuente.id,
+    className: "flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-800 min-w-[130px]"
+  }, fuente.nombre), /*#__PURE__*/React.createElement("div", {
+    className: "relative flex-1 max-w-[180px]"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.01",
+    inputMode: "decimal",
+    placeholder: "0.00",
+    value: incomes[fuente.id] || '',
+    onChange: e => handleIncomeChange(fuente.id, e.target.value),
+    className: "w-full text-right font-bold text-slate-900 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 pr-7"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "absolute right-3 top-2.5 text-xs text-slate-400 font-bold"
+  }, "€"))))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-slate-100 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-500 font-medium"
+  }, "Cuenta donde se cobra:"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaIngreso,
+    onChange: e => setCuentaIngreso(e.target.value),
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
+  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
+    className: "md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between space-y-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400 uppercase tracking-wider font-semibold"
+  }, "2. Previsualización del Reparto"), /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl font-extrabold mt-1 text-white font-sans"
+  }, formatCurrency(totalIngresoCalculado)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400"
+  }, "Total Nóminas Registradas"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 space-y-2.5 text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-cyan-400"
+  }), "Sabadell IRPF (", Math.round(irpfPct * 100), "%)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-cyan-300 font-sans"
+  }, formatCurrency(preview.irpf))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-sky-400"
+  }), "Sabadell Ahorro (", Math.round(ahorroPct * 100), "%)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-sky-300 font-sans"
+  }, formatCurrency(preview.ahorro))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-zinc-300"
+  }), "Trade Republic (Fijo)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-white font-sans"
+  }, formatCurrency(preview.inv))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between p-2.5 bg-white/10 rounded-xl border border-white/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2 font-bold text-amber-300"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-amber-400"
+  }), "Disponible Gastos (", Math.round(gastoPct * 100), "%)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-amber-300 font-sans"
+  }, formatCurrency(preview.gasto))))), /*#__PURE__*/React.createElement("button", {
+    onClick: handleExecuteDistribution,
+    disabled: totalIngresoCalculado <= 0,
+    className: "w-full py-3 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 shadow-lg shadow-amber-400/20 active:scale-98 transition-all flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "zap",
+    className: "w-4 h-4 text-slate-950"
+  }), "Distribuir Sueldo y Generar Transferencias"))));
+};
+
+// ==========================================
+// 📖 DIARIO DE MOVIMIENTOS & FILTROS
+// ==========================================
+const MovimientosView = ({
+  initialAccountFilter,
+  onOpenNewModal,
+  onEditModal
+}) => {
+  const {
+    data,
+    deleteMovimiento
+  } = useFinance();
+  const [search, setSearch] = useState('');
+  const [selectedType, setSelectedType] = useState('todos');
+  const [selectedAccount, setSelectedAccount] = useState(initialAccountFilter || 'todos');
+  const [selectedCategory, setSelectedCategory] = useState('todas');
+  const [selectedMonth, setSelectedMonth] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Lista de meses disponibles en el histórico
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    data.movimientos.forEach(m => {
+      if (m.fecha && m.fecha.length >= 7) {
+        months.add(m.fecha.substring(0, 7));
+      }
+    });
+    return Array.from(months).sort().reverse();
+  }, [data.movimientos]);
+
+  // Filtrado reactivo
+  const filteredMovimientos = useMemo(() => {
+    return data.movimientos.filter(m => {
+      if (selectedType !== 'todos' && m.tipo !== selectedType) return false;
+      if (selectedAccount !== 'todos') {
+        if (m.tipo === 'gasto' && m.cuentaOrigen !== selectedAccount) return false;
+        if (m.tipo === 'ingreso' && m.cuentaDestino !== selectedAccount) return false;
+        if (m.tipo === 'transferencia' && m.cuentaOrigen !== selectedAccount && m.cuentaDestino !== selectedAccount) return false;
+      }
+      if (selectedCategory !== 'todas' && m.categoria !== selectedCategory) return false;
+      if (selectedMonth !== 'todos' && (!m.fecha || !m.fecha.startsWith(selectedMonth))) return false;
+      if (search.trim()) {
+        const query = search.toLowerCase();
+        const cat = (m.categoria || '').toLowerCase();
+        const com = (m.comentario || '').toLowerCase();
+        const imp = (m.importe || '').toString();
+        if (!cat.includes(query) && !com.includes(query) && !imp.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [data.movimientos, selectedType, selectedAccount, selectedCategory, selectedMonth, search]);
+
+  // Totales de la selección filtrada
+  const filteredTotals = useMemo(() => {
+    let gastos = 0;
+    let ingresos = 0;
+    filteredMovimientos.forEach(m => {
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'gasto') gastos += imp;
+      if (m.tipo === 'ingreso') ingresos += imp;
+    });
+    return {
+      gastos,
+      ingresos,
+      balance: ingresos - gastos
+    };
+  }, [filteredMovimientos]);
+
+  // Paginación
+  const totalPages = Math.ceil(filteredMovimientos.length / itemsPerPage) || 1;
+  const paginatedMovimientos = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredMovimientos.slice(start, start + itemsPerPage);
+  }, [filteredMovimientos, currentPage]);
+  const handleDelete = (id, e) => {
+    e.stopPropagation();
+    if (confirm('¿Eliminar este movimiento? Los saldos se recalcularán automáticamente.')) {
+      deleteMovimiento(id);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-5 pb-24 md:pb-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col sm:flex-row items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative flex-1 w-full"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "search",
+    className: "w-4 h-4 absolute left-3 top-3 text-slate-400"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Buscar por concepto, comentario o importe...",
+    value: search,
+    onChange: e => {
+      setSearch(e.target.value);
+      setCurrentPage(1);
+    },
+    className: "w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: selectedMonth,
+    onChange: e => {
+      setSelectedMonth(e.target.value);
+      setCurrentPage(1);
+    },
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todos"
+  }, "📅 Todos los meses"), availableMonths.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m,
+    value: m
+  }, m))), /*#__PURE__*/React.createElement("select", {
+    value: selectedType,
+    onChange: e => {
+      setSelectedType(e.target.value);
+      setCurrentPage(1);
+    },
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todos"
+  }, "Todos los tipos"), /*#__PURE__*/React.createElement("option", {
+    value: "gasto"
+  }, "Solo Gastos"), /*#__PURE__*/React.createElement("option", {
+    value: "ingreso"
+  }, "Solo Ingresos"), /*#__PURE__*/React.createElement("option", {
+    value: "transferencia"
+  }, "Solo Transferencias")), /*#__PURE__*/React.createElement("select", {
+    value: selectedAccount,
+    onChange: e => {
+      setSelectedAccount(e.target.value);
+      setCurrentPage(1);
+    },
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todos"
+  }, "Todas las cuentas"), data.cuentas.map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 font-medium"
+  }, "Mostrando ", /*#__PURE__*/React.createElement("strong", null, filteredMovimientos.length), " movimientos"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "Gastos: ", /*#__PURE__*/React.createElement("strong", {
+    className: "text-rose-600 font-sans"
+  }, "-", formatCurrency(filteredTotals.gastos))), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "Ingresos: ", /*#__PURE__*/React.createElement("strong", {
+    className: "text-emerald-600 font-sans"
+  }, "+", formatCurrency(filteredTotals.ingresos)))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-slate-100"
+  }, paginatedMovimientos.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "p-12 text-center text-slate-400 text-xs"
+  }, "No se han encontrado movimientos con los filtros seleccionados.") : paginatedMovimientos.map(m => {
+    const isGasto = m.tipo === 'gasto';
+    const isIngreso = m.tipo === 'ingreso';
+    const isTransfer = m.tipo === 'transferencia';
+    const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
+    const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      onClick: () => onEditModal(m),
+      className: "p-3.5 sm:p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGasto ? 'bg-rose-50 text-rose-600' : isIngreso ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-sky-600'}`
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer',
+      className: "w-4 h-4"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs sm:text-sm font-bold text-slate-900 truncate"
+    }, m.categoria || (isTransfer ? 'Transferencia' : 'General')), m.comentario && /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-slate-500 truncate max-w-[140px] sm:max-w-md"
+    }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 text-[11px] text-slate-400 mt-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-medium text-slate-500"
+    }, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("strong", {
+      className: "text-slate-700"
+    }, origAcc?.nombre || 'Origen'), " → ", /*#__PURE__*/React.createElement("strong", {
+      className: "text-slate-700"
+    }, destAcc?.nombre || 'Destino')) : isGasto ? /*#__PURE__*/React.createElement("span", null, "Cuenta: ", /*#__PURE__*/React.createElement("strong", {
+      className: "text-slate-700"
+    }, origAcc?.nombre || 'General')) : /*#__PURE__*/React.createElement("span", null, "Destino: ", /*#__PURE__*/React.createElement("strong", {
+      className: "text-slate-700"
+    }, destAcc?.nombre || 'General'))))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-xs sm:text-sm font-bold font-sans ${isGasto ? 'text-slate-900' : isIngreso ? 'text-emerald-600' : 'text-sky-700'}`
+    }, isGasto ? `-${formatCurrency(m.importe)}` : isIngreso ? `+${formatCurrency(m.importe)}` : `⇄ ${formatCurrency(m.importe)}`), /*#__PURE__*/React.createElement("button", {
+      onClick: e => handleDelete(m.id, e),
+      title: "Eliminar movimiento",
+      className: "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 transition-opacity"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "trash",
+      className: "w-4 h-4"
+    }))));
+  })), totalPages > 1 && /*#__PURE__*/React.createElement("div", {
+    className: "p-4 border-t border-slate-100 flex items-center justify-between text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "Página ", currentPage, " de ", totalPages), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: currentPage <= 1,
+    onClick: () => setCurrentPage(p => Math.max(1, p - 1)),
+    className: "px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
+  }, "Anterior"), /*#__PURE__*/React.createElement("button", {
+    disabled: currentPage >= totalPages,
+    onClick: () => setCurrentPage(p => Math.min(totalPages, p + 1)),
+    className: "px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
+  }, "Siguiente")))));
+};
+
+// ==========================================
+// 📈 ANALÍTICA & GRÁFICOS INTERACTIVOS (SVG)
+// ==========================================
+const AnaliticaView = () => {
+  const {
+    data
+  } = useFinance();
+  const [timeRange, setTimeRange] = useState('2026'); // '2026' | 'all' | '6m' | '3m'
+
+  // Agrupación mensual
+  const monthlyData = useMemo(() => {
+    const map = {};
+    data.movimientos.forEach(m => {
+      if (!m.fecha || m.fecha.length < 7) return;
+      const monthKey = m.fecha.substring(0, 7); // YYYY-MM
+      if (!map[monthKey]) {
+        map[monthKey] = {
+          mes: monthKey,
+          ingresos: 0,
+          gastos: 0,
+          transferencias: 0
+        };
+      }
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'ingreso') map[monthKey].ingresos += imp;
+      if (m.tipo === 'gasto') map[monthKey].gastos += imp;
+      if (m.tipo === 'transferencia') map[monthKey].transferencias += imp;
+    });
+    const sorted = Object.values(map).sort((a, b) => a.mes.localeCompare(b.mes));
+
+    // Filtrar según rango
+    if (timeRange === '3m') return sorted.slice(-3);
+    if (timeRange === '6m') return sorted.slice(-6);
+    if (timeRange === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
+    return sorted;
+  }, [data.movimientos, timeRange]);
+
+  // Gastos por categoría
+  const categoryExpenses = useMemo(() => {
+    const map = {};
+    let totalGasto = 0;
+    data.movimientos.forEach(m => {
+      if (m.tipo === 'gasto') {
+        const cat = m.categoria || 'Otros';
+        const imp = parseFloat(m.importe) || 0;
+        map[cat] = (map[cat] || 0) + imp;
+        totalGasto += imp;
+      }
+    });
+    return Object.entries(map).map(([categoria, importe]) => ({
+      categoria,
+      importe,
+      porcentaje: totalGasto > 0 ? Math.round(importe / totalGasto * 100) : 0
+    })).sort((a, b) => b.importe - a.importe);
+  }, [data.movimientos]);
+
+  // Evolución del Patrimonio Mes a Mes (Gráfico de Líneas)
+  const patrimonioEvolution = useMemo(() => {
+    const initialSum = data.cuentas.reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
+    let runningTotal = initialSum;
+    const history = [];
+
+    // Todos los meses ordenados
+    const allMonths = Array.from(new Set(data.movimientos.map(m => m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
+    allMonths.forEach(mKey => {
+      const monthMovs = data.movimientos.filter(m => m.fecha && m.fecha.startsWith(mKey));
+      monthMovs.forEach(m => {
+        const imp = parseFloat(m.importe) || 0;
+        if (m.tipo === 'ingreso') runningTotal += imp;
+        if (m.tipo === 'gasto') runningTotal -= imp;
+      });
+      history.push({
+        mes: mKey,
+        total: runningTotal
+      });
+    });
+    if (timeRange === '3m') return history.slice(-3);
+    if (timeRange === '6m') return history.slice(-6);
+    if (timeRange === '2026') return history.filter(h => h.mes.startsWith('2026'));
+    return history;
+  }, [data.cuentas, data.movimientos, timeRange]);
+
+  // Generador de puntos SVG para el gráfico de línea
+  const lineChartData = useMemo(() => {
+    if (patrimonioEvolution.length === 0) return {
+      path: '',
+      area: '',
+      points: [],
+      maxVal: 0,
+      minVal: 0
+    };
+    const values = patrimonioEvolution.map(d => d.total);
+    const minVal = Math.min(...values, 0);
+    const maxVal = Math.max(...values, 1000);
+    const range = maxVal - minVal || 1;
+    const width = 600;
+    const height = 220;
+    const padding = 30;
+    const points = patrimonioEvolution.map((d, idx) => {
+      const x = padding + idx / Math.max(1, patrimonioEvolution.length - 1) * (width - 2 * padding);
+      const y = height - padding - (d.total - minVal) / range * (height - 2 * padding);
+      return {
+        x,
+        y,
+        ...d
+      };
+    });
+    const path = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
+    const area = `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+    return {
+      path,
+      area,
+      points,
+      maxVal,
+      minVal,
+      width,
+      height
+    };
+  }, [patrimonioEvolution]);
+  const maxMonthExpense = useMemo(() => {
+    return Math.max(...monthlyData.map(m => Math.max(m.ingresos, m.gastos)), 1000);
+  }, [monthlyData]);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6 pb-24 md:pb-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-bold text-slate-900"
+  }, "Analítica & Evolución"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Métricas consolidadas de tu patrimonio y hábitos de gasto")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 bg-slate-100 p-1 rounded-xl"
+  }, [{
+    id: '2026',
+    label: 'Año 2026'
+  }, {
+    id: '6m',
+    label: 'Últimos 6m'
+  }, {
+    id: '3m',
+    label: 'Últimos 3m'
+  }, {
+    id: 'all',
+    label: 'Todo'
+  }].map(btn => /*#__PURE__*/React.createElement("button", {
+    key: btn.id,
+    onClick: () => setTimeRange(btn.id),
+    className: `px-3 py-1 text-xs font-semibold rounded-lg transition-all ${timeRange === btn.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`
+  }, btn.label)))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trendingUp",
+    className: "w-4 h-4 text-blue-600"
+  }), "Evolución del Patrimonio Neto (€)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Curva de crecimiento patrimonial")), lineChartData.points.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-sm font-bold text-slate-900 font-sans"
+  }, "Último: ", formatCurrency(lineChartData.points[lineChartData.points.length - 1].total))), /*#__PURE__*/React.createElement("div", {
+    className: "w-full overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("svg", {
+    viewBox: `0 0 ${lineChartData.width || 600} ${lineChartData.height || 220}`,
+    className: "w-full h-52"
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    id: "patrimonioGrad",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#3b82f6",
+    stopOpacity: "0.25"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#3b82f6",
+    stopOpacity: "0.0"
+  }))), /*#__PURE__*/React.createElement("line", {
+    x1: "30",
+    y1: "30",
+    x2: "570",
+    y2: "30",
+    stroke: "#f1f5f9",
+    strokeWidth: "1"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "30",
+    y1: "110",
+    x2: "570",
+    y2: "110",
+    stroke: "#f1f5f9",
+    strokeWidth: "1"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "30",
+    y1: "190",
+    x2: "570",
+    y2: "190",
+    stroke: "#e2e8f0",
+    strokeWidth: "1"
+  }), lineChartData.area && /*#__PURE__*/React.createElement("path", {
+    d: lineChartData.area,
+    fill: "url(#patrimonioGrad)"
+  }), lineChartData.path && /*#__PURE__*/React.createElement("path", {
+    d: lineChartData.path,
+    fill: "none",
+    stroke: "#2563eb",
+    strokeWidth: "3",
+    strokeLinecap: "round"
+  }), lineChartData.points.map((p, i) => /*#__PURE__*/React.createElement("g", {
+    key: i
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: p.x,
+    cy: p.y,
+    r: "4",
+    fill: "#ffffff",
+    stroke: "#2563eb",
+    strokeWidth: "2.5"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: p.x,
+    y: "210",
+    textAnchor: "middle",
+    fontSize: "9",
+    fill: "#94a3b8",
+    fontWeight: "600"
+  }, p.mes.substring(5))))))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "chart",
+    className: "w-4 h-4 text-emerald-600"
+  }), "Ingresos vs Gastos por Mes"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Comparativa mensual de flujo"))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3 pt-2"
+  }, monthlyData.map(m => {
+    const ingPct = Math.round(m.ingresos / maxMonthExpense * 100);
+    const gastPct = Math.round(m.gastos / maxMonthExpense * 100);
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.mes,
+      className: "space-y-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between text-xs font-semibold text-slate-700"
+    }, /*#__PURE__*/React.createElement("span", null, m.mes), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-slate-400 font-sans"
+    }, "+", formatCurrency(m.ingresos), " / -", formatCurrency(m.gastos))), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 h-3.5 bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-100"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-emerald-500 rounded-full transition-all",
+      style: {
+        width: `${ingPct}%`
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "bg-rose-400 rounded-full transition-all",
+      style: {
+        width: `${gastPct}%`
+      }
+    })));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "pieChart",
+    className: "w-4 h-4 text-amber-600"
+  }), "Distribución de Gastos por Categoría"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2.5 max-h-[320px] overflow-y-auto pr-1"
+  }, categoryExpenses.slice(0, 10).map((cat, idx) => /*#__PURE__*/React.createElement("div", {
+    key: cat.categoria,
+    className: "p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 h-5 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]"
+  }, idx + 1), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-800 truncate"
+  }, cat.categoria)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-medium"
+  }, cat.porcentaje, "%"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-900 font-sans"
+  }, formatCurrency(cat.importe)))))))));
+};
+
+// ==========================================
+// ⚙️ AJUSTES & GESTIÓN DE FIREBASE
+// ==========================================
+const AjustesView = () => {
+  const {
+    data,
+    firebaseUrl,
+    setFirebaseUrl,
+    syncNow,
+    syncStatus,
+    lastSyncTime,
+    updateConfig,
+    toggleCuenta,
+    importJsonData,
+    resetToOriginalData
+  } = useFinance();
+  const [inputUrl, setInputUrl] = useState(firebaseUrl);
+  const [irpf, setIrpf] = useState(data.config.repartoSueldo.irpf * 100);
+  const [ahorro, setAhorro] = useState(data.config.repartoSueldo.ahorro * 100);
+  const [gasto, setGasto] = useState(data.config.repartoSueldo.gasto * 100);
+  const [invFija, setInvFija] = useState(data.config.inversionFija);
+  const [statusMsg, setStatusMsg] = useState('');
+  const handleSaveFirebase = e => {
+    e.preventDefault();
+    setFirebaseUrl(inputUrl);
+    syncNow();
+    setStatusMsg('URL de Firebase guardada y sincronización iniciada.');
+  };
+  const handleSavePercentages = e => {
+    e.preventDefault();
+    const sum = parseFloat(irpf) + parseFloat(ahorro) + parseFloat(gasto);
+    if (Math.abs(sum - 100) > 0.01) {
+      alert(`Los porcentajes deben sumar exactamente 100%. Suma actual: ${sum}%`);
+      return;
+    }
+    updateConfig({
+      repartoSueldo: {
+        irpf: parseFloat(irpf) / 100,
+        ahorro: parseFloat(ahorro) / 100,
+        gasto: parseFloat(gasto) / 100
+      },
+      inversionFija: parseFloat(invFija) || 60.00
+    });
+    setStatusMsg('Configuración de reparto de sueldo guardada.');
+  };
+  const handleExportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finanzas_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const handleImportJsonFile = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const json = JSON.parse(event.target.result);
+        if (importJsonData(json)) {
+          alert('¡Datos importados con éxito!');
+        } else {
+          alert('El archivo JSON no tiene la estructura válida requerida.');
+        }
+      } catch (err) {
+        alert('Error al leer el archivo JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  const handleResetHistory = async () => {
+    if (confirm('¿Restablecer todos los datos al archivo data.json inicial con todo el histórico 2026? Se sobrescribirá el estado local y en Firebase.')) {
+      const ok = await resetToOriginalData();
+      if (ok) alert('Datos restablecidos al histórico 2026.');
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6 max-w-3xl mx-auto pb-24 md:pb-8"
+  }, statusMsg && /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, statusMsg), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setStatusMsg(''),
+    className: "text-emerald-600"
+  }, "×")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "cloud",
+    className: "w-5 h-5"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Google Firebase Realtime Database"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Sincronización reactiva 24/7 con resolución de conflictos por timestamp"))), /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSaveFirebase,
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "URL REST de la Base de Datos Firebase (.json)"), /*#__PURE__*/React.createElement("input", {
+    type: "url",
+    value: inputUrl,
+    onChange: e => setInputUrl(e.target.value),
+    placeholder: "https://tu-proyecto.firebasedatabase.app/finanzas.json",
+    className: "w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pt-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400"
+  }, "Estado: ", /*#__PURE__*/React.createElement("strong", {
+    className: "text-slate-700 capitalize"
+  }, syncStatus), lastSyncTime && /*#__PURE__*/React.createElement("span", null, " • Última sincronización: ", lastSyncTime.toLocaleTimeString())), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
+  }, "Guardar y Conectar")))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "zap",
+    className: "w-4 h-4 text-amber-500"
+  }), "Porcentajes del Reparto de Sueldo"), /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSavePercentages,
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-3 gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "IRPF Sabadell (%)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "1",
+    value: irpf,
+    onChange: e => setIrpf(e.target.value),
+    className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "Ahorro Sabadell (%)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "1",
+    value: ahorro,
+    onChange: e => setAhorro(e.target.value),
+    className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "Gasto Corriente (%)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "1",
+    value: gasto,
+    onChange: e => setGasto(e.target.value),
+    className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "Inversión Fija Mensual (Trade Republic €)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.01",
+    value: invFija,
+    onChange: e => setInvFija(e.target.value),
+    className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-end"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
+  }, "Guardar Porcentajes")))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Visibilidad de Cuentas"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, data.cuentas.map(c => /*#__PURE__*/React.createElement("div", {
+    key: c.id,
+    className: "flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3 h-3 rounded-full",
+    style: {
+      backgroundColor: c.color
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-900"
+  }, c.nombre)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleCuenta(c.id),
+    className: `text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${c.activa ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-200 text-slate-500 border-transparent'}`
+  }, c.activa ? 'Visible' : 'Oculta'))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900"
+  }, "Copias de Seguridad & Datos"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: handleExportJson,
+    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "download",
+    className: "w-4 h-4"
+  }), "Exportar JSON"), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "upload",
+    className: "w-4 h-4"
+  }), "Importar JSON", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    onChange: handleImportJsonFile,
+    className: "hidden"
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: handleResetHistory,
+    className: "text-rose-600 hover:text-rose-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-rose-200 ml-auto transition-colors"
+  }, "Restablecer a Histórico 2026"))));
+};
+
+// ==========================================
+// ➕ MODAL DE CREACIÓN / EDICIÓN DE MOVIMIENTO
+// ==========================================
+const MovementModal = ({
+  isOpen,
+  onClose,
+  editingMovement = null,
+  defaultType = 'gasto'
+}) => {
+  const {
+    data,
+    addMovimiento,
+    updateMovimiento
+  } = useFinance();
+  const [tipo, setTipo] = useState(defaultType);
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [importe, setImporte] = useState('');
+  const [cuentaOrigen, setCuentaOrigen] = useState('acc-santander');
+  const [cuentaDestino, setCuentaDestino] = useState('acc-bbva');
+  const [categoria, setCategoria] = useState('Comida');
+  const [comentario, setComentario] = useState('');
+  useEffect(() => {
+    if (editingMovement) {
+      setTipo(editingMovement.tipo || 'gasto');
+      setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
+      setImporte(editingMovement.importe?.toString() || '');
+      setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
+      setCuentaDestino(editingMovement.cuentaDestino || 'acc-bbva');
+      setCategoria(editingMovement.categoria || 'Comida');
+      setComentario(editingMovement.comentario || '');
+    } else {
+      setTipo(defaultType);
+      setFecha(new Date().toISOString().split('T')[0]);
+      setImporte('');
+      setCuentaOrigen('acc-santander');
+      setCuentaDestino('acc-bbva');
+      setCategoria(defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
+      setComentario('');
+    }
+  }, [editingMovement, defaultType, isOpen]);
+  if (!isOpen) return null;
+  const handleSubmit = e => {
+    e.preventDefault();
+    const num = parseFloat(importe);
+    if (isNaN(num) || num <= 0) {
+      alert('Introduce un importe válido mayor que cero.');
+      return;
+    }
+    const payload = {
+      fecha,
+      tipo,
+      cuentaOrigen: tipo !== 'ingreso' ? cuentaOrigen : '',
+      cuentaDestino: tipo !== 'gasto' ? cuentaDestino : '',
+      importe: num,
+      categoria: tipo === 'transferencia' ? categoria || 'Transferencia' : categoria,
+      comentario
+    };
+    if (editingMovement) {
+      updateMovimiento(editingMovement.id, payload);
+    } else {
+      addMovimiento(payload);
+    }
+    onClose();
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-5 border-b border-slate-100 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-base font-bold text-slate-900"
+  }, editingMovement ? 'Editar Movimiento' : 'Nuevo Movimiento'), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-700 p-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "x",
+    className: "w-5 h-5"
+  }))), /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSubmit,
+    className: "p-5 space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl"
+  }, [{
+    id: 'gasto',
+    label: 'Gasto',
+    color: 'text-rose-600'
+  }, {
+    id: 'ingreso',
+    label: 'Ingreso',
+    color: 'text-emerald-600'
+  }, {
+    id: 'transferencia',
+    label: 'Transferir',
+    color: 'text-sky-600'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    type: "button",
+    onClick: () => setTipo(t.id),
+    className: `py-2 rounded-xl text-xs font-bold transition-all ${tipo === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`
+  }, t.label))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Importe (€)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.01",
+    inputMode: "decimal",
+    required: true,
+    autoFocus: true,
+    placeholder: "0.00",
+    value: importe,
+    onChange: e => setImporte(e.target.value),
+    className: "w-full text-2xl font-black text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900 font-sans"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Fecha"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: fecha,
+    onChange: e => setFecha(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none"
+  })), tipo === 'gasto' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Cuenta"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaOrigen,
+    onChange: e => setCuentaOrigen(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
+  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre)))), tipo === 'ingreso' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Cuenta Destino"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaDestino,
+    onChange: e => setCuentaDestino(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
+  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre)))), tipo === 'transferencia' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "De (Origen)"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaOrigen,
+    onChange: e => setCuentaOrigen(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
+  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "A (Destino)"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaDestino,
+    onChange: e => setCuentaDestino(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
+  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre))))), tipo !== 'transferencia' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Categoría"), /*#__PURE__*/React.createElement("select", {
+    value: categoria,
+    onChange: e => setCategoria(e.target.value),
+    className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
+  }, data.categorias.filter(c => c.tipo === tipo || c.tipo === 'mixto').map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.nombre
+  }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-bold text-slate-700 block mb-1"
+  }, "Comentario / Nota (Opcional)"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "ej. Mercadona, Restaurante, Regalo...",
+    value: comentario,
+    onChange: e => setComentario(e.target.value),
+    className: "w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 flex items-center justify-end gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md active:scale-98 transition-all"
+  }, editingMovement ? 'Guardar Cambios' : 'Añadir Movimiento')))));
+};
+
+// ==========================================
+// 🚀 APP ROOT COMPONENT
+// ==========================================
+const App = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState(null);
+  const [defaultModalType, setDefaultModalType] = useState('gasto');
+  const [accountFilter, setAccountFilter] = useState('todos');
+  const handleOpenNewModal = (type = 'gasto') => {
+    setEditingMovement(null);
+    setDefaultModalType(type);
+    setIsModalOpen(true);
+  };
+  const handleEditModal = mov => {
+    setEditingMovement(mov);
+    setIsModalOpen(true);
+  };
+  const handleSelectAccountFilter = accId => {
+    setAccountFilter(accId);
+    setActiveTab('movimientos');
+  };
+  return /*#__PURE__*/React.createElement(FinanceProvider, null, /*#__PURE__*/React.createElement("div", {
+    className: "min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white"
+  }, /*#__PURE__*/React.createElement(Navbar, {
+    activeTab: activeTab,
+    setActiveTab: setActiveTab,
+    onOpenNewModal: () => handleOpenNewModal('gasto')
+  }), /*#__PURE__*/React.createElement("main", {
+    className: "flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8"
+  }, activeTab === 'dashboard' && /*#__PURE__*/React.createElement(DashboardView, {
+    setActiveTab: setActiveTab,
+    onOpenNewModal: handleOpenNewModal,
+    onSelectAccountFilter: handleSelectAccountFilter
+  }), activeTab === 'sueldo' && /*#__PURE__*/React.createElement(SueldoEngineView, {
+    setActiveTab: setActiveTab
+  }), activeTab === 'movimientos' && /*#__PURE__*/React.createElement(MovimientosView, {
+    initialAccountFilter: accountFilter,
+    onOpenNewModal: handleOpenNewModal,
+    onEditModal: handleEditModal
+  }), activeTab === 'analitica' && /*#__PURE__*/React.createElement(AnaliticaView, null), activeTab === 'ajustes' && /*#__PURE__*/React.createElement(AjustesView, null)), /*#__PURE__*/React.createElement(BottomNav, {
+    activeTab: activeTab,
+    setActiveTab: setActiveTab,
+    onOpenNewModal: () => handleOpenNewModal('gasto')
+  }), /*#__PURE__*/React.createElement(MovementModal, {
+    isOpen: isModalOpen,
+    onClose: () => setIsModalOpen(false),
+    editingMovement: editingMovement,
+    defaultType: defaultModalType
+  })));
+};
+
+// Render en el DOM
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  const root = ReactDOM.createRoot(rootEl);
+  root.render(/*#__PURE__*/React.createElement(App, null));
+}
