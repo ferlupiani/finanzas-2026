@@ -234,6 +234,30 @@ const Icon = ({
       strokeLinejoin: "round",
       strokeWidth: "2",
       d: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+    }),
+    chevronDown: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M19 9l-7 7-7-7"
+    }),
+    chevronUp: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M5 15l7-7 7 7"
+    }),
+    layers: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+    }),
+    list: /*#__PURE__*/React.createElement("path", {
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "2",
+      d: "M4 6h16M4 12h16M4 18h16"
     })
   };
   return /*#__PURE__*/React.createElement("svg", {
@@ -262,6 +286,26 @@ const formatDate = dateStr => {
   try {
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+};
+const formatDateFull = dateStr => {
+  if (!dateStr || dateStr === 'Sin fecha') return dateStr;
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      const dateObj = new Date(y, m - 1, d);
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const dayOfWeek = dayNames[dateObj.getDay()];
+      const monthName = monthNames[m - 1];
+      return `${dayOfWeek}, ${d} de ${monthName} de ${y}`;
+    }
     return dateStr;
   } catch (e) {
     return dateStr;
@@ -334,7 +378,7 @@ const STORAGE_KEY = 'finanzas_data_v1';
 const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 const defaultFallbackData = {
-  version: '1.2',
+  version: '1.3',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: {
@@ -344,25 +388,44 @@ const defaultFallbackData = {
     },
     inversionFija: 60.00,
     gastosFijosDefecto: [{
+      id: 'gf-1',
       nombre: 'Alquiler + Gastos Casa',
       categoria: 'Alquiler',
       cuenta: 'acc-santander',
       importe: 325.00
     }, {
+      id: 'gf-2',
       nombre: 'Spotify',
       categoria: 'Suscripciones',
       cuenta: 'acc-santander',
       importe: 6.49
     }, {
+      id: 'gf-3',
       nombre: 'Basic Fit',
       categoria: 'Suscripciones',
       cuenta: 'acc-santander',
       importe: 24.99
     }, {
+      id: 'gf-4',
       nombre: 'AppleCare+',
       categoria: 'Suscripciones',
       cuenta: 'acc-santander',
       importe: 5.49
+    }],
+    ingresosFijosDefecto: [{
+      id: 'if-1',
+      nombre: 'Beneficio Cuenta BBVA',
+      categoria: 'Otros Ingresos',
+      cuenta: 'acc-bbva',
+      importe: 16.20,
+      isVariable: false
+    }, {
+      id: 'if-2',
+      nombre: 'Intereses Sabadell Remunerada',
+      categoria: 'Inversiones',
+      cuenta: 'acc-sab-ahorro',
+      importe: 23.11,
+      isVariable: true
     }]
   },
   cuentas: [{
@@ -567,7 +630,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     return (b.id || '').localeCompare(a.id || '');
   });
   return {
-    version: input.version || '1.2',
+    version: input.version || '1.3',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -576,7 +639,8 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
         gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
       },
       inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija,
-      gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto)
+      gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto),
+      ingresosFijosDefecto: toCleanArray(input.config?.ingresosFijosDefecto, fallback.config.ingresosFijosDefecto)
     },
     cuentas: cuentas.length > 0 ? cuentas : fallback.cuentas,
     categorias: categorias.length > 0 ? categorias : fallback.categorias,
@@ -766,7 +830,7 @@ const FinanceProvider = ({
     }));
   };
 
-  // Modificación 1: Gestión de Fuentes de Ingreso / Nóminas (Añadir, Editar, Eliminar)
+  // Gestión de Fuentes de Ingreso / Nóminas
   const addFuenteIngreso = ({
     nombre,
     importeDefecto
@@ -796,6 +860,87 @@ const FinanceProvider = ({
     updateAndSyncData(prev => ({
       ...prev,
       fuentesIngreso: (prev.fuentesIngreso || []).filter(f => f.id !== id)
+    }));
+  };
+
+  // Gestión Dinámica de Gastos Fijos
+  const addGastoFijo = gasto => {
+    const newId = `gf-${Date.now()}`;
+    const newGf = {
+      id: newId,
+      nombre: gasto.nombre.trim(),
+      categoria: gasto.categoria || 'Suscripciones',
+      cuenta: gasto.cuenta || 'acc-santander',
+      importe: parseFloat(gasto.importe) || 0.00
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: [...(prev.config?.gastosFijosDefecto || []), newGf]
+      }
+    }));
+  };
+  const updateGastoFijo = (id, fields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: (prev.config?.gastosFijosDefecto || []).map(g => g.id === id || g.nombre === id ? {
+          ...g,
+          ...fields
+        } : g)
+      }
+    }));
+  };
+  const deleteGastoFijo = id => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: (prev.config?.gastosFijosDefecto || []).filter(g => g.id !== id && g.nombre !== id)
+      }
+    }));
+  };
+
+  // Gestión Dinámica de Ingresos Fijos / Beneficios
+  const addIngresoFijo = ingreso => {
+    const newId = `if-${Date.now()}`;
+    const newIf = {
+      id: newId,
+      nombre: ingreso.nombre.trim(),
+      categoria: ingreso.categoria || 'Otros Ingresos',
+      cuenta: ingreso.cuenta || 'acc-bbva',
+      importe: parseFloat(ingreso.importe) || 0.00,
+      isVariable: !!ingreso.isVariable
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: [...(prev.config?.ingresosFijosDefecto || []), newIf]
+      }
+    }));
+  };
+  const updateIngresoFijo = (id, fields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: (prev.config?.ingresosFijosDefecto || []).map(i => i.id === id || i.nombre === id ? {
+          ...i,
+          ...fields
+        } : i)
+      }
+    }));
+  };
+  const deleteIngresoFijo = id => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: (prev.config?.ingresosFijosDefecto || []).filter(i => i.id !== id && i.nombre !== id)
+      }
     }));
   };
   const distribuirSueldo = ({
@@ -926,8 +1071,6 @@ const FinanceProvider = ({
     }
     return false;
   };
-
-  // Cálculo exacto de saldos
   const saldos = useMemo(() => {
     const bal = {};
     (data.cuentas || []).forEach(c => {
@@ -974,6 +1117,12 @@ const FinanceProvider = ({
       addFuenteIngreso,
       updateFuenteIngreso,
       deleteFuenteIngreso,
+      addGastoFijo,
+      updateGastoFijo,
+      deleteGastoFijo,
+      addIngresoFijo,
+      updateIngresoFijo,
+      deleteIngresoFijo,
       distribuirSueldo,
       updateConfig,
       toggleCuenta,
@@ -1262,7 +1411,7 @@ const DashboardView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-slate-950"
-  }), "Motor de Sueldo & Gastos Fijos"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), "Motor Sueldo & Fijos"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 px-1"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-bold text-slate-900"
@@ -1352,7 +1501,7 @@ const DashboardView = ({
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO & GASTOS FIJOS (Modificación 1)
+// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & BENEFICIOS (Modificaciones 1 & 3)
 // ==========================================
 const SueldoEngineView = ({
   setActiveTab
@@ -1363,7 +1512,13 @@ const SueldoEngineView = ({
     addMovimiento,
     addFuenteIngreso,
     updateFuenteIngreso,
-    deleteFuenteIngreso
+    deleteFuenteIngreso,
+    addGastoFijo,
+    updateGastoFijo,
+    deleteGastoFijo,
+    addIngresoFijo,
+    updateIngresoFijo,
+    deleteIngresoFijo
   } = useFinance();
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
 
@@ -1375,8 +1530,6 @@ const SueldoEngineView = ({
     });
     return init;
   });
-
-  // Mantener actualizado si cambian las fuentes
   useEffect(() => {
     setIncomes(prev => {
       const next = {
@@ -1396,15 +1549,36 @@ const SueldoEngineView = ({
   const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
   const [distributionResult, setDistributionResult] = useState(null);
-  const [confirmedFixedMsg, setConfirmedFixedMsg] = useState('');
+  const [notificationMsg, setNotificationMsg] = useState('');
 
-  // Modificación 1: Modal para Gestionar Trabajos / Fuentes de Ingreso
+  // 1. Gestión de Trabajos
   const [isManageSourcesOpen, setIsManageSourcesOpen] = useState(false);
   const [newSourceName, setNewSourceName] = useState('');
   const [newSourceDefaultAmt, setNewSourceDefaultAmt] = useState('');
   const [editingSourceId, setEditingSourceId] = useState(null);
   const [editSourceName, setEditSourceName] = useState('');
   const [editSourceAmt, setEditSourceAmt] = useState('');
+
+  // 2. Gestión de Gastos Fijos
+  const [isManageFixedExpOpen, setIsManageFixedExpOpen] = useState(false);
+  const [newFixedExpName, setNewFixedExpName] = useState('');
+  const [newFixedExpCategory, setNewFixedExpCategory] = useState('Suscripciones');
+  const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-santander');
+  const [newFixedExpAmt, setNewFixedExpAmt] = useState('');
+
+  // Estado para cuentas e importes dinámicos de cada tarjeta de gasto fijo
+  const [fixedExpSelections, setFixedExpSelections] = useState({});
+
+  // 3. Gestión de Ingresos Fijos / Beneficios
+  const [isManageFixedIncOpen, setIsManageFixedIncOpen] = useState(false);
+  const [newFixedIncName, setNewFixedIncName] = useState('');
+  const [newFixedIncCategory, setNewFixedIncCategory] = useState('Otros Ingresos');
+  const [newFixedIncAccount, setNewFixedIncAccount] = useState('acc-bbva');
+  const [newFixedIncAmt, setNewFixedIncAmt] = useState('');
+  const [newFixedIncIsVariable, setNewFixedIncIsVariable] = useState(false);
+
+  // Estado para importes y cuentas de ingresos fijos (como Sabadell remunerada editable)
+  const [fixedIncSelections, setFixedIncSelections] = useState({});
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
   }, [incomes]);
@@ -1449,35 +1623,49 @@ const SueldoEngineView = ({
       });
     }
   };
-  const handleQuickRegisterFixedExpense = gastoFijo => {
+
+  // Registrar Gasto Fijo con cuenta e importe seleccionables
+  const handleQuickRegisterFixedExpense = (gf, index) => {
+    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-santander';
+    const rawAmt = fixedExpSelections[gf.id || index]?.importe;
+    const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : gf.importe;
+    if (isNaN(finalAmt) || finalAmt <= 0) {
+      alert('Introduce un importe válido mayor que cero.');
+      return;
+    }
     addMovimiento({
       fecha: fecha,
       tipo: 'gasto',
-      cuentaOrigen: gastoFijo.cuenta || 'acc-santander',
-      importe: gastoFijo.importe,
-      categoria: gastoFijo.categoria,
-      comentario: gastoFijo.nombre
+      cuentaOrigen: selectedAcc,
+      importe: finalAmt,
+      categoria: gf.categoria || 'Suscripciones',
+      comentario: gf.nombre
     });
-    setConfirmedFixedMsg(`¡Gasto registrado!: ${gastoFijo.nombre} (-${formatCurrency(gastoFijo.importe)})`);
-    setTimeout(() => setConfirmedFixedMsg(''), 4000);
+    const accName = (data.cuentas || []).find(c => c.id === selectedAcc)?.nombre || 'Cuenta';
+    setNotificationMsg(`¡Gasto registrado!: ${gf.nombre} (-${formatCurrency(finalAmt)}) en ${accName}`);
+    setTimeout(() => setNotificationMsg(''), 4000);
   };
-  const handleAddNewSource = e => {
-    e.preventDefault();
-    if (!newSourceName.trim()) return;
-    addFuenteIngreso({
-      nombre: newSourceName,
-      importeDefecto: parseFloat(newSourceDefaultAmt) || 0
+
+  // Registrar Ingreso Fijo / Beneficio con cuenta e importe seleccionables
+  const handleQuickRegisterFixedIncome = (inc, index) => {
+    const selectedAcc = fixedIncSelections[inc.id || index]?.cuenta || inc.cuenta || 'acc-bbva';
+    const rawAmt = fixedIncSelections[inc.id || index]?.importe;
+    const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : inc.importe;
+    if (isNaN(finalAmt) || finalAmt <= 0) {
+      alert('Introduce el importe exacto ingresado.');
+      return;
+    }
+    addMovimiento({
+      fecha: fecha,
+      tipo: 'ingreso',
+      cuentaDestino: selectedAcc,
+      importe: finalAmt,
+      categoria: inc.categoria || 'Otros Ingresos',
+      comentario: inc.nombre
     });
-    setNewSourceName('');
-    setNewSourceDefaultAmt('');
-  };
-  const handleSaveEditSource = id => {
-    if (!editSourceName.trim()) return;
-    updateFuenteIngreso(id, {
-      nombre: editSourceName.trim(),
-      importeDefecto: parseFloat(editSourceAmt) || 0
-    });
-    setEditingSourceId(null);
+    const accName = (data.cuentas || []).find(c => c.id === selectedAcc)?.nombre || 'Cuenta';
+    setNotificationMsg(`¡Ingreso registrado!: ${inc.nombre} (+${formatCurrency(finalAmt)}) en ${accName}`);
+    setTimeout(() => setNotificationMsg(''), 4000);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-6 max-w-4xl mx-auto pb-24 md:pb-8"
@@ -1488,23 +1676,23 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-3.5 h-3.5 text-amber-600"
-  }), "Automatización de Nóminas & Gastos Fijos"), /*#__PURE__*/React.createElement("h2", {
+  }), "Automatización de Nóminas & Finanzas Recurrentes"), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-bold text-slate-900"
-  }, "Motor de Nóminas y Gastos Recurrentes"), /*#__PURE__*/React.createElement("p", {
+  }, "Motor de Nóminas, Gastos & Beneficios"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Configura tus trabajos, modifica sus importes y actívalos el día que recibas el cobro.")), /*#__PURE__*/React.createElement("div", {
+  }, "Gestiona tus trabajos, gastos fijos y beneficios bancarios bajo demanda con selección de cuenta.")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
-  }, "Fecha de cobro:"), /*#__PURE__*/React.createElement("input", {
+  }, "Fecha de aplicación:"), /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: fecha,
     onChange: e => setFecha(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
-  }))), confirmedFixedMsg && /*#__PURE__*/React.createElement("div", {
+  }))), notificationMsg && /*#__PURE__*/React.createElement("div", {
     className: "bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center justify-between animate-fadeIn"
-  }, /*#__PURE__*/React.createElement("span", null, confirmedFixedMsg), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setConfirmedFixedMsg(''),
+  }, /*#__PURE__*/React.createElement("span", null, notificationMsg), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setNotificationMsg(''),
     className: "text-emerald-600"
   }, "×")), distributionResult && /*#__PURE__*/React.createElement("div", {
     className: "bg-emerald-50 border border-emerald-200 rounded-2xl p-5 relative animate-fadeIn"
@@ -1585,7 +1773,15 @@ const SueldoEngineView = ({
         onChange: e => setEditSourceAmt(e.target.value),
         className: "w-24 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right"
       }), /*#__PURE__*/React.createElement("button", {
-        onClick: () => handleSaveEditSource(fuente.id),
+        onClick: () => {
+          if (editSourceName.trim()) {
+            updateFuenteIngreso(fuente.id, {
+              nombre: editSourceName.trim(),
+              importeDefecto: parseFloat(editSourceAmt) || 0
+            });
+            setEditingSourceId(null);
+          }
+        },
         className: "text-xs bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg"
       }, "Guardar"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setEditingSourceId(null),
@@ -1623,11 +1819,21 @@ const SueldoEngineView = ({
       className: "w-3.5 h-3.5"
     }))));
   })), /*#__PURE__*/React.createElement("form", {
-    onSubmit: handleAddNewSource,
+    onSubmit: e => {
+      e.preventDefault();
+      if (newSourceName.trim()) {
+        addFuenteIngreso({
+          nombre: newSourceName,
+          importeDefecto: newSourceDefaultAmt
+        });
+        setNewSourceName('');
+        setNewSourceDefaultAmt('');
+      }
+    },
     className: "pt-2 border-t border-slate-200/80 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: "Nombre nuevo trabajo (ej. Colegio Nuevo)",
+    placeholder: "Nombre nuevo trabajo",
     value: newSourceName,
     onChange: e => setNewSourceName(e.target.value),
     className: "flex-1 text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
@@ -1722,34 +1928,284 @@ const SueldoEngineView = ({
     className: "w-4 h-4 text-slate-950"
   }), "Confirmar y Distribuir Nómina"))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-slate-900 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "creditCard",
-    className: "w-4 h-4 text-indigo-600"
+    className: "w-4 h-4 text-rose-600"
   }), "Gastos Fijos & Suscripciones (Activar cuando se cobren)"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Pulsa en \"Registrar Pago\" el día en que te llegue el cargo bancario para aplicarlo al saldo.")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
-  }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => /*#__PURE__*/React.createElement("div", {
-    key: idx,
-    className: "p-3.5 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2.5"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-slate-800 block"
-  }, gf.nombre), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-slate-400"
-  }, gf.categoria)), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between pt-2 border-t border-slate-200/60"
+  }, "Elige la cuenta bancaria de cargo y pulsa \"Registrar Pago\" el día que te pasen el recibo.")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setIsManageFixedExpOpen(!isManageFixedExpOpen),
+    className: "text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "settings",
+    className: "w-3.5 h-3.5"
+  }), isManageFixedExpOpen ? 'Cerrar Edición' : 'Editar Gastos Fijos')), isManageFixedExpOpen && /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 animate-fadeIn"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-black text-slate-900 font-sans"
-  }, formatCurrency(gf.importe)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => handleQuickRegisterFixedExpense(gf),
-    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow-sm active:scale-95 transition-all"
-  }, "Registrar Pago")))))));
+    className: "text-xs font-bold text-slate-900"
+  }, "Añadir / Eliminar Gastos Fijos"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "Personaliza tus recibos mensuales")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto"
+  }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => /*#__PURE__*/React.createElement("div", {
+    key: gf.id || idx,
+    className: "p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-800 block"
+  }, gf.nombre), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, gf.categoria, " • ", formatCurrency(gf.importe))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => deleteGastoFijo(gf.id || gf.nombre),
+    className: "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trash",
+    className: "w-3.5 h-3.5"
+  }))))), /*#__PURE__*/React.createElement("form", {
+    onSubmit: e => {
+      e.preventDefault();
+      if (newFixedExpName.trim() && newFixedExpAmt) {
+        addGastoFijo({
+          nombre: newFixedExpName,
+          categoria: newFixedExpCategory,
+          cuenta: newFixedExpAccount,
+          importe: newFixedExpAmt
+        });
+        setNewFixedExpName('');
+        setNewFixedExpAmt('');
+      }
+    },
+    className: "pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Nombre (ej. Gimnasio)",
+    value: newFixedExpName,
+    onChange: e => setNewFixedExpName(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }), /*#__PURE__*/React.createElement("select", {
+    value: newFixedExpCategory,
+    onChange: e => setNewFixedExpCategory(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, (data.categorias || []).filter(c => c.tipo === 'gasto').map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.nombre
+  }, c.nombre))), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.01",
+    placeholder: "Importe €",
+    value: newFixedExpAmt,
+    onChange: e => setNewFixedExpAmt(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-right font-bold"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl"
+  }, "+ Guardar"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+  }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => {
+    const currentSelection = fixedExpSelections[gf.id || idx] || {};
+    const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-santander';
+    const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : gf.importe;
+    return /*#__PURE__*/React.createElement("div", {
+      key: gf.id || idx,
+      className: "p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-bold text-slate-900 block truncate"
+    }, gf.nombre), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-semibold text-slate-400"
+    }, gf.categoria)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex items-center justify-between gap-1 text-[11px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 font-medium"
+    }, "Cuenta:"), /*#__PURE__*/React.createElement("select", {
+      value: currentAcc,
+      onChange: e => {
+        const val = e.target.value;
+        setFixedExpSelections(prev => ({
+          ...prev,
+          [gf.id || idx]: {
+            ...prev[gf.id || idx],
+            cuenta: val
+          }
+        }));
+      },
+      className: "bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
+    }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between pt-2 border-t border-slate-200/60 gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "relative flex-1"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      step: "0.01",
+      value: currentAmt,
+      onChange: e => {
+        const val = e.target.value;
+        setFixedExpSelections(prev => ({
+          ...prev,
+          [gf.id || idx]: {
+            ...prev[gf.id || idx],
+            importe: val
+          }
+        }));
+      },
+      className: "w-full text-xs font-black text-slate-900 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right font-sans"
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => handleQuickRegisterFixedExpense(gf, idx),
+      className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+    }, "Pagar")));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "sparkles",
+    className: "w-4 h-4 text-emerald-600"
+  }), "Ingresos Fijos & Beneficios Bancarios (BBVA, Sabadell Remunerada...)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 mt-0.5"
+  }, "Registra cobros periódicos de cuentas remuneradas o bonificaciones bancarias con 1 solo clic.")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setIsManageFixedIncOpen(!isManageFixedIncOpen),
+    className: "text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "settings",
+    className: "w-3.5 h-3.5"
+  }), isManageFixedIncOpen ? 'Cerrar Edición' : 'Editar Beneficios')), isManageFixedIncOpen && /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 animate-fadeIn"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-900"
+  }, "Añadir / Eliminar Ingresos Fijos"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "Configura tus beneficios recurrentes")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto"
+  }, (data.config?.ingresosFijosDefecto || []).map((inc, idx) => /*#__PURE__*/React.createElement("div", {
+    key: inc.id || idx,
+    className: "p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-800 block"
+  }, inc.nombre), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, (data.cuentas || []).find(c => c.id === inc.cuenta)?.nombre || 'Cuenta', " • ", inc.isVariable ? 'Importe Variable' : formatCurrency(inc.importe))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => deleteIngresoFijo(inc.id || inc.nombre),
+    className: "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trash",
+    className: "w-3.5 h-3.5"
+  }))))), /*#__PURE__*/React.createElement("form", {
+    onSubmit: e => {
+      e.preventDefault();
+      if (newFixedIncName.trim()) {
+        addIngresoFijo({
+          nombre: newFixedIncName,
+          categoria: newFixedIncCategory,
+          cuenta: newFixedIncAccount,
+          importe: newFixedIncAmt || 0,
+          isVariable: newFixedIncIsVariable
+        });
+        setNewFixedIncName('');
+        setNewFixedIncAmt('');
+      }
+    },
+    className: "pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Nombre beneficio",
+    value: newFixedIncName,
+    onChange: e => setNewFixedIncName(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }), /*#__PURE__*/React.createElement("select", {
+    value: newFixedIncAccount,
+    onChange: e => setNewFixedIncAccount(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre))), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.01",
+    placeholder: "Importe base €",
+    value: newFixedIncAmt,
+    onChange: e => setNewFixedIncAmt(e.target.value),
+    className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-right font-bold"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl"
+  }, "+ Guardar"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  }, (data.config?.ingresosFijosDefecto || []).map((inc, idx) => {
+    const currentSelection = fixedIncSelections[inc.id || idx] || {};
+    const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
+    const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : inc.isVariable ? '' : inc.importe;
+    const accObj = (data.cuentas || []).find(c => c.id === currentAcc);
+    return /*#__PURE__*/React.createElement("div", {
+      key: inc.id || idx,
+      className: "p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-bold text-slate-900 block truncate"
+    }, inc.nombre), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"
+    }, inc.isVariable ? 'Variable' : 'Fijo')), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex items-center justify-between gap-1 text-[11px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 font-medium"
+    }, "Destino:"), /*#__PURE__*/React.createElement("select", {
+      value: currentAcc,
+      onChange: e => {
+        const val = e.target.value;
+        setFixedIncSelections(prev => ({
+          ...prev,
+          [inc.id || idx]: {
+            ...prev[inc.id || idx],
+            cuenta: val
+          }
+        }));
+      },
+      className: "bg-white border border-emerald-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
+    }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between pt-2 border-t border-emerald-200/60 gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "relative flex-1"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      step: "0.01",
+      placeholder: inc.isVariable ? "Escribir importe €" : "0.00",
+      value: currentAmt,
+      onChange: e => {
+        const val = e.target.value;
+        setFixedIncSelections(prev => ({
+          ...prev,
+          [inc.id || idx]: {
+            ...prev[inc.id || idx],
+            importe: val
+          }
+        }));
+      },
+      className: "w-full text-xs font-black text-slate-900 bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-right font-sans focus:ring-2 focus:ring-emerald-500"
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => handleQuickRegisterFixedIncome(inc, idx),
+      className: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+    }, "Registrar")));
+  }))));
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS
+// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS (Modificación 2)
 // ==========================================
 const MovimientosView = ({
   initialAccountFilter,
@@ -1766,7 +2222,17 @@ const MovimientosView = ({
   const [selectedCategory, setSelectedCategory] = useState('todas');
   const [selectedMonth, setSelectedMonth] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 30;
+
+  // Modificación 2: Vista Lista Detallada vs Vista Compacta por Fechas
+  const [viewMode, setViewMode] = useState('compactByDate'); // 'compactByDate' | 'detailed'
+  const [expandedDates, setExpandedDates] = useState(() => ({}));
+  const toggleDateExpand = dateKey => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [dateKey]: prev[dateKey] === undefined ? false : !prev[dateKey]
+    }));
+  };
   const availableMonths = useMemo(() => {
     const months = new Set();
     (data.movimientos || []).forEach(m => {
@@ -1812,6 +2278,29 @@ const MovimientosView = ({
       ingresos,
       balance: ingresos - gastos
     };
+  }, [filteredMovimientos]);
+
+  // Agrupación por fecha
+  const groupedByDate = useMemo(() => {
+    const map = {};
+    filteredMovimientos.forEach(m => {
+      const d = m.fecha || 'Sin fecha';
+      if (!map[d]) {
+        map[d] = {
+          fecha: d,
+          movimientos: [],
+          totalGastos: 0,
+          totalIngresos: 0,
+          totalTransferencias: 0
+        };
+      }
+      map[d].movimientos.push(m);
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'gasto') map[d].totalGastos += imp;
+      if (m.tipo === 'ingreso') map[d].totalIngresos += imp;
+      if (m.tipo === 'transferencia') map[d].totalTransferencias += imp;
+    });
+    return Object.values(map).sort((a, b) => b.fecha.localeCompare(a.fecha));
   }, [filteredMovimientos]);
   const totalPages = Math.ceil(filteredMovimientos.length / itemsPerPage) || 1;
   const paginatedMovimientos = useMemo(() => {
@@ -1887,9 +2376,25 @@ const MovimientosView = ({
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
     className: "pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 font-medium"
-  }, "Mostrando ", /*#__PURE__*/React.createElement("strong", null, filteredMovimientos.length), " movimientos"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("strong", null, filteredMovimientos.length), " movimientos en ", /*#__PURE__*/React.createElement("strong", null, groupedByDate.length), " días"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center bg-slate-100 p-0.5 rounded-xl ml-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewMode('compactByDate'),
+    className: `flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${viewMode === 'compactByDate' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "layers",
+    className: "w-3.5 h-3.5"
+  }), "Por Fechas"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewMode('detailed'),
+    className: `flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${viewMode === 'detailed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "list",
+    className: "w-3.5 h-3.5"
+  }), "Lista"))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-4"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-600"
@@ -1899,7 +2404,90 @@ const MovimientosView = ({
     className: "text-slate-600"
   }, "Ingresos: ", /*#__PURE__*/React.createElement("strong", {
     className: "text-emerald-600 font-sans"
-  }, "+", formatCurrency(filteredTotals.ingresos)))))), /*#__PURE__*/React.createElement("div", {
+  }, "+", formatCurrency(filteredTotals.ingresos)))))), viewMode === 'compactByDate' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, groupedByDate.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "p-12 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200"
+  }, "No se han encontrado movimientos con los filtros seleccionados.") : groupedByDate.map(group => {
+    const isExpanded = expandedDates[group.fecha] !== false; // Abierto por defecto
+
+    return /*#__PURE__*/React.createElement("div", {
+      key: group.fecha,
+      className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all"
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: () => toggleDateExpand(group.fecha),
+      className: "p-4 bg-slate-50/70 hover:bg-slate-100/70 transition-colors flex items-center justify-between cursor-pointer select-none"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-8 h-8 rounded-xl bg-slate-200/70 flex items-center justify-center text-slate-700"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "calendar",
+      className: "w-4 h-4"
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs sm:text-sm font-bold text-slate-900 block"
+    }, formatDateFull(group.fecha)), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-slate-400 font-medium"
+    }, group.movimientos.length, " ", group.movimientos.length === 1 ? 'movimiento' : 'movimientos'))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, group.totalGastos > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-bold text-rose-600 font-sans"
+    }, "-", formatCurrency(group.totalGastos)), group.totalIngresos > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-bold text-emerald-600 font-sans"
+    }, "+", formatCurrency(group.totalIngresos)), /*#__PURE__*/React.createElement(Icon, {
+      name: isExpanded ? 'chevronUp' : 'chevronDown',
+      className: "w-4 h-4 text-slate-400"
+    }))), isExpanded && /*#__PURE__*/React.createElement("div", {
+      className: "divide-y divide-slate-100 border-t border-slate-100"
+    }, group.movimientos.map(m => {
+      const isGasto = m.tipo === 'gasto';
+      const isIngreso = m.tipo === 'ingreso';
+      const isTransfer = m.tipo === 'transferencia';
+      const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+      const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+      return /*#__PURE__*/React.createElement("div", {
+        key: m.id,
+        onClick: () => onEditModal(m),
+        className: "p-3.5 sm:p-4 hover:bg-slate-50/50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3 min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isGasto ? 'bg-rose-50 text-rose-600' : isIngreso ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-sky-600'}`
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer',
+        className: "w-3.5 h-3.5"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-xs sm:text-sm font-bold text-slate-900 truncate"
+      }, m.categoria || (isTransfer ? 'Transferencia' : 'General')), m.comentario && /*#__PURE__*/React.createElement("span", {
+        className: "text-xs text-slate-500 truncate max-w-[140px] sm:max-w-md"
+      }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 text-[11px] text-slate-400 mt-0.5"
+      }, isTransfer ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("strong", {
+        className: "text-slate-700"
+      }, origAcc?.nombre || 'Origen'), " → ", /*#__PURE__*/React.createElement("strong", {
+        className: "text-slate-700"
+      }, destAcc?.nombre || 'Destino')) : isGasto ? /*#__PURE__*/React.createElement("span", null, "Cuenta: ", /*#__PURE__*/React.createElement("strong", {
+        className: "text-slate-700"
+      }, origAcc?.nombre || 'General')) : /*#__PURE__*/React.createElement("span", null, "Destino: ", /*#__PURE__*/React.createElement("strong", {
+        className: "text-slate-700"
+      }, destAcc?.nombre || 'General'))))), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-xs sm:text-sm font-bold font-sans ${isGasto ? 'text-slate-900' : isIngreso ? 'text-emerald-600' : 'text-sky-700'}`
+      }, isGasto ? `-${formatCurrency(m.importe)}` : isIngreso ? `+${formatCurrency(m.importe)}` : `⇄ ${formatCurrency(m.importe)}`), /*#__PURE__*/React.createElement("button", {
+        onClick: e => handleDelete(m.id, e),
+        title: "Eliminar movimiento",
+        className: "opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 transition-opacity"
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "trash",
+        className: "w-4 h-4"
+      }))));
+    })));
+  })), viewMode === 'detailed' && /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "divide-y divide-slate-100"
@@ -1972,7 +2560,7 @@ const MovimientosView = ({
 };
 
 // ==========================================
-// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR (Modificación 3)
+// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR
 // ==========================================
 const AnaliticaView = () => {
   const {
@@ -1980,10 +2568,11 @@ const AnaliticaView = () => {
     saldos,
     totalPatrimonio
   } = useFinance();
-  const [periodoFilter, setPeriodoFilter] = useState('2026'); // '2026', 'mes', '6m', '3m', 'all'
+  const [periodoFilter, setPeriodoFilter] = useState('2026');
   const [selectedSpecificMonth, setSelectedSpecificMonth] = useState('2026-08');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
   const availableMonths = useMemo(() => {
     const months = new Set();
     (data.movimientos || []).forEach(m => {
@@ -1993,8 +2582,6 @@ const AnaliticaView = () => {
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
-
-  // Movimientos filtrados para el análisis
   const analysisMovements = useMemo(() => {
     return (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
@@ -2007,8 +2594,6 @@ const AnaliticaView = () => {
       return true;
     });
   }, [data.movimientos, periodoFilter, selectedSpecificMonth, selectedCategoryFilter, availableMonths]);
-
-  // Métricas Clave Consolidadas
   const periodKpis = useMemo(() => {
     let ingresos = 0;
     let gastos = 0;
@@ -2032,8 +2617,6 @@ const AnaliticaView = () => {
       mediaGastoDiario
     };
   }, [analysisMovements, periodoFilter]);
-
-  // Desglose por Categorías
   const categoryExpenses = useMemo(() => {
     const map = {};
     let totalGasto = 0;
@@ -2051,8 +2634,6 @@ const AnaliticaView = () => {
       porcentaje: totalGasto > 0 ? Math.round(importe / totalGasto * 100) : 0
     })).sort((a, b) => b.importe - a.importe);
   }, [analysisMovements]);
-
-  // Comparativa Mensual de Ingresos vs Gastos vs Ahorro
   const monthlyComparison = useMemo(() => {
     const map = {};
     (data.movimientos || []).forEach(m => {
@@ -2078,9 +2659,6 @@ const AnaliticaView = () => {
     if (periodoFilter === 'mes') return sorted.filter(m => m.mes === selectedSpecificMonth);
     return sorted;
   }, [data.movimientos, periodoFilter, selectedSpecificMonth]);
-
-  // Evolución del Patrimonio Neto Disponible (Calculado por cuenta respetando incluirEnTotal)
-  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
   const patrimonioEvolution = useMemo(() => {
     const activeCuentasMap = {};
     (data.cuentas || []).forEach(c => {
@@ -2163,14 +2741,10 @@ const AnaliticaView = () => {
   const maxMonthExpense = useMemo(() => {
     return Math.max(...monthlyComparison.map(m => Math.max(m.ingresos, m.gastos)), 1000);
   }, [monthlyComparison]);
-
-  // Exportador de Excel que replica la plantilla original
   const handleExportReplicatedExcel = () => {
     const targetMonth = periodoFilter === 'mes' ? selectedSpecificMonth : '2026-08';
     const monthName = formatMonthName(targetMonth);
     const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(targetMonth));
-
-    // Construcción en formato XML / HTML compatible 100% con Microsoft Excel (.xls)
     let excelHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>

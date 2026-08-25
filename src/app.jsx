@@ -89,7 +89,11 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     dollar: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
     presentation: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />,
     table: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
-    sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />,
+    chevronDown: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />,
+    chevronUp: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />,
+    layers: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />,
+    list: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
   };
 
   return (
@@ -117,6 +121,30 @@ const formatDate = (dateStr) => {
   try {
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const formatDateFull = (dateStr) => {
+  if (!dateStr || dateStr === 'Sin fecha') return dateStr;
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      const dateObj = new Date(y, m - 1, d);
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      const dayOfWeek = dayNames[dateObj.getDay()];
+      const monthName = monthNames[m - 1];
+      return `${dayOfWeek}, ${d} de ${monthName} de ${y}`;
+    }
     return dateStr;
   } catch (e) {
     return dateStr;
@@ -165,16 +193,20 @@ const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 
 const defaultFallbackData = {
-  version: '1.2',
+  version: '1.3',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: { irpf: 0.18, ahorro: 0.50, gasto: 0.32 },
     inversionFija: 60.00,
     gastosFijosDefecto: [
-      { nombre: 'Alquiler + Gastos Casa', categoria: 'Alquiler', cuenta: 'acc-santander', importe: 325.00 },
-      { nombre: 'Spotify', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 6.49 },
-      { nombre: 'Basic Fit', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 24.99 },
-      { nombre: 'AppleCare+', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 5.49 }
+      { id: 'gf-1', nombre: 'Alquiler + Gastos Casa', categoria: 'Alquiler', cuenta: 'acc-santander', importe: 325.00 },
+      { id: 'gf-2', nombre: 'Spotify', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 6.49 },
+      { id: 'gf-3', nombre: 'Basic Fit', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 24.99 },
+      { id: 'gf-4', nombre: 'AppleCare+', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 5.49 }
+    ],
+    ingresosFijosDefecto: [
+      { id: 'if-1', nombre: 'Beneficio Cuenta BBVA', categoria: 'Otros Ingresos', cuenta: 'acc-bbva', importe: 16.20, isVariable: false },
+      { id: 'if-2', nombre: 'Intereses Sabadell Remunerada', categoria: 'Inversiones', cuenta: 'acc-sab-ahorro', importe: 23.11, isVariable: true }
     ]
   },
   cuentas: [
@@ -247,7 +279,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
   });
 
   return {
-    version: input.version || '1.2',
+    version: input.version || '1.3',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -256,7 +288,8 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
         gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
       },
       inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija,
-      gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto)
+      gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto),
+      ingresosFijosDefecto: toCleanArray(input.config?.ingresosFijosDefecto, fallback.config.ingresosFijosDefecto)
     },
     cuentas: cuentas.length > 0 ? cuentas : fallback.cuentas,
     categorias: categorias.length > 0 ? categorias : fallback.categorias,
@@ -460,7 +493,7 @@ const FinanceProvider = ({ children }) => {
     }));
   };
 
-  // Modificación 1: Gestión de Fuentes de Ingreso / Nóminas (Añadir, Editar, Eliminar)
+  // Gestión de Fuentes de Ingreso / Nóminas
   const addFuenteIngreso = ({ nombre, importeDefecto }) => {
     const newId = `src-${Date.now()}`;
     const newFuente = {
@@ -486,6 +519,85 @@ const FinanceProvider = ({ children }) => {
     updateAndSyncData(prev => ({
       ...prev,
       fuentesIngreso: (prev.fuentesIngreso || []).filter(f => f.id !== id)
+    }));
+  };
+
+  // Gestión Dinámica de Gastos Fijos
+  const addGastoFijo = (gasto) => {
+    const newId = `gf-${Date.now()}`;
+    const newGf = {
+      id: newId,
+      nombre: gasto.nombre.trim(),
+      categoria: gasto.categoria || 'Suscripciones',
+      cuenta: gasto.cuenta || 'acc-santander',
+      importe: parseFloat(gasto.importe) || 0.00
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: [...(prev.config?.gastosFijosDefecto || []), newGf]
+      }
+    }));
+  };
+
+  const updateGastoFijo = (id, fields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: (prev.config?.gastosFijosDefecto || []).map(g => (g.id === id || g.nombre === id) ? { ...g, ...fields } : g)
+      }
+    }));
+  };
+
+  const deleteGastoFijo = (id) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        gastosFijosDefecto: (prev.config?.gastosFijosDefecto || []).filter(g => g.id !== id && g.nombre !== id)
+      }
+    }));
+  };
+
+  // Gestión Dinámica de Ingresos Fijos / Beneficios
+  const addIngresoFijo = (ingreso) => {
+    const newId = `if-${Date.now()}`;
+    const newIf = {
+      id: newId,
+      nombre: ingreso.nombre.trim(),
+      categoria: ingreso.categoria || 'Otros Ingresos',
+      cuenta: ingreso.cuenta || 'acc-bbva',
+      importe: parseFloat(ingreso.importe) || 0.00,
+      isVariable: !!ingreso.isVariable
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: [...(prev.config?.ingresosFijosDefecto || []), newIf]
+      }
+    }));
+  };
+
+  const updateIngresoFijo = (id, fields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: (prev.config?.ingresosFijosDefecto || []).map(i => (i.id === id || i.nombre === id) ? { ...i, ...fields } : i)
+      }
+    }));
+  };
+
+  const deleteIngresoFijo = (id) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      config: {
+        ...(prev.config || {}),
+        ingresosFijosDefecto: (prev.config?.ingresosFijosDefecto || []).filter(i => i.id !== id && i.nombre !== id)
+      }
     }));
   };
 
@@ -609,7 +721,6 @@ const FinanceProvider = ({ children }) => {
     return false;
   };
 
-  // Cálculo exacto de saldos
   const saldos = useMemo(() => {
     const bal = {};
     (data.cuentas || []).forEach(c => {
@@ -666,6 +777,12 @@ const FinanceProvider = ({ children }) => {
       addFuenteIngreso,
       updateFuenteIngreso,
       deleteFuenteIngreso,
+      addGastoFijo,
+      updateGastoFijo,
+      deleteGastoFijo,
+      addIngresoFijo,
+      updateIngresoFijo,
+      deleteIngresoFijo,
       distribuirSueldo,
       updateConfig,
       toggleCuenta,
@@ -837,7 +954,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Hero Card: Patrimonio Neto Disponible (Calibrado con Sabadell IRPF Separado) */}
+      {/* Hero Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white p-6 sm:p-8 shadow-xl shadow-slate-900/10">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
@@ -915,7 +1032,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 ml-auto"
           >
             <Icon name="zap" className="w-4 h-4 text-slate-950" />
-            Motor de Sueldo & Gastos Fijos
+            Motor Sueldo & Fijos
           </button>
         </div>
       </div>
@@ -1063,7 +1180,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO & GASTOS FIJOS (Modificación 1)
+// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & BENEFICIOS (Modificaciones 1 & 3)
 // ==========================================
 const SueldoEngineView = ({ setActiveTab }) => {
   const {
@@ -1072,7 +1189,13 @@ const SueldoEngineView = ({ setActiveTab }) => {
     addMovimiento,
     addFuenteIngreso,
     updateFuenteIngreso,
-    deleteFuenteIngreso
+    deleteFuenteIngreso,
+    addGastoFijo,
+    updateGastoFijo,
+    deleteGastoFijo,
+    addIngresoFijo,
+    updateIngresoFijo,
+    deleteIngresoFijo
   } = useFinance();
 
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
@@ -1086,7 +1209,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
     return init;
   });
 
-  // Mantener actualizado si cambian las fuentes
   useEffect(() => {
     setIncomes(prev => {
       const next = { ...prev };
@@ -1106,15 +1228,36 @@ const SueldoEngineView = ({ setActiveTab }) => {
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
 
   const [distributionResult, setDistributionResult] = useState(null);
-  const [confirmedFixedMsg, setConfirmedFixedMsg] = useState('');
+  const [notificationMsg, setNotificationMsg] = useState('');
 
-  // Modificación 1: Modal para Gestionar Trabajos / Fuentes de Ingreso
+  // 1. Gestión de Trabajos
   const [isManageSourcesOpen, setIsManageSourcesOpen] = useState(false);
   const [newSourceName, setNewSourceName] = useState('');
   const [newSourceDefaultAmt, setNewSourceDefaultAmt] = useState('');
   const [editingSourceId, setEditingSourceId] = useState(null);
   const [editSourceName, setEditSourceName] = useState('');
   const [editSourceAmt, setEditSourceAmt] = useState('');
+
+  // 2. Gestión de Gastos Fijos
+  const [isManageFixedExpOpen, setIsManageFixedExpOpen] = useState(false);
+  const [newFixedExpName, setNewFixedExpName] = useState('');
+  const [newFixedExpCategory, setNewFixedExpCategory] = useState('Suscripciones');
+  const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-santander');
+  const [newFixedExpAmt, setNewFixedExpAmt] = useState('');
+  
+  // Estado para cuentas e importes dinámicos de cada tarjeta de gasto fijo
+  const [fixedExpSelections, setFixedExpSelections] = useState({});
+
+  // 3. Gestión de Ingresos Fijos / Beneficios
+  const [isManageFixedIncOpen, setIsManageFixedIncOpen] = useState(false);
+  const [newFixedIncName, setNewFixedIncName] = useState('');
+  const [newFixedIncCategory, setNewFixedIncCategory] = useState('Otros Ingresos');
+  const [newFixedIncAccount, setNewFixedIncAccount] = useState('acc-bbva');
+  const [newFixedIncAmt, setNewFixedIncAmt] = useState('');
+  const [newFixedIncIsVariable, setNewFixedIncIsVariable] = useState(false);
+
+  // Estado para importes y cuentas de ingresos fijos (como Sabadell remunerada editable)
+  const [fixedIncSelections, setFixedIncSelections] = useState({});
 
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
@@ -1159,37 +1302,54 @@ const SueldoEngineView = ({ setActiveTab }) => {
     }
   };
 
-  const handleQuickRegisterFixedExpense = (gastoFijo) => {
+  // Registrar Gasto Fijo con cuenta e importe seleccionables
+  const handleQuickRegisterFixedExpense = (gf, index) => {
+    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-santander';
+    const rawAmt = fixedExpSelections[gf.id || index]?.importe;
+    const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : gf.importe;
+
+    if (isNaN(finalAmt) || finalAmt <= 0) {
+      alert('Introduce un importe válido mayor que cero.');
+      return;
+    }
+
     addMovimiento({
       fecha: fecha,
       tipo: 'gasto',
-      cuentaOrigen: gastoFijo.cuenta || 'acc-santander',
-      importe: gastoFijo.importe,
-      categoria: gastoFijo.categoria,
-      comentario: gastoFijo.nombre
+      cuentaOrigen: selectedAcc,
+      importe: finalAmt,
+      categoria: gf.categoria || 'Suscripciones',
+      comentario: gf.nombre
     });
-    setConfirmedFixedMsg(`¡Gasto registrado!: ${gastoFijo.nombre} (-${formatCurrency(gastoFijo.importe)})`);
-    setTimeout(() => setConfirmedFixedMsg(''), 4000);
+
+    const accName = (data.cuentas || []).find(c => c.id === selectedAcc)?.nombre || 'Cuenta';
+    setNotificationMsg(`¡Gasto registrado!: ${gf.nombre} (-${formatCurrency(finalAmt)}) en ${accName}`);
+    setTimeout(() => setNotificationMsg(''), 4000);
   };
 
-  const handleAddNewSource = (e) => {
-    e.preventDefault();
-    if (!newSourceName.trim()) return;
-    addFuenteIngreso({
-      nombre: newSourceName,
-      importeDefecto: parseFloat(newSourceDefaultAmt) || 0
-    });
-    setNewSourceName('');
-    setNewSourceDefaultAmt('');
-  };
+  // Registrar Ingreso Fijo / Beneficio con cuenta e importe seleccionables
+  const handleQuickRegisterFixedIncome = (inc, index) => {
+    const selectedAcc = fixedIncSelections[inc.id || index]?.cuenta || inc.cuenta || 'acc-bbva';
+    const rawAmt = fixedIncSelections[inc.id || index]?.importe;
+    const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : inc.importe;
 
-  const handleSaveEditSource = (id) => {
-    if (!editSourceName.trim()) return;
-    updateFuenteIngreso(id, {
-      nombre: editSourceName.trim(),
-      importeDefecto: parseFloat(editSourceAmt) || 0
+    if (isNaN(finalAmt) || finalAmt <= 0) {
+      alert('Introduce el importe exacto ingresado.');
+      return;
+    }
+
+    addMovimiento({
+      fecha: fecha,
+      tipo: 'ingreso',
+      cuentaDestino: selectedAcc,
+      importe: finalAmt,
+      categoria: inc.categoria || 'Otros Ingresos',
+      comentario: inc.nombre
     });
-    setEditingSourceId(null);
+
+    const accName = (data.cuentas || []).find(c => c.id === selectedAcc)?.nombre || 'Cuenta';
+    setNotificationMsg(`¡Ingreso registrado!: ${inc.nombre} (+${formatCurrency(finalAmt)}) en ${accName}`);
+    setTimeout(() => setNotificationMsg(''), 4000);
   };
 
   return (
@@ -1199,16 +1359,16 @@ const SueldoEngineView = ({ setActiveTab }) => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 mb-2">
             <Icon name="zap" className="w-3.5 h-3.5 text-amber-600" />
-            Automatización de Nóminas & Gastos Fijos
+            Automatización de Nóminas & Finanzas Recurrentes
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas y Gastos Recurrentes</h2>
+          <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas, Gastos & Beneficios</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Configura tus trabajos, modifica sus importes y actívalos el día que recibas el cobro.
+            Gestiona tus trabajos, gastos fijos y beneficios bancarios bajo demanda con selección de cuenta.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Fecha de cobro:</span>
+          <span className="text-xs text-slate-400">Fecha de aplicación:</span>
           <input
             type="date"
             value={fecha}
@@ -1218,10 +1378,10 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {confirmedFixedMsg && (
+      {notificationMsg && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center justify-between animate-fadeIn">
-          <span>{confirmedFixedMsg}</span>
-          <button onClick={() => setConfirmedFixedMsg('')} className="text-emerald-600">×</button>
+          <span>{notificationMsg}</span>
+          <button onClick={() => setNotificationMsg('')} className="text-emerald-600">×</button>
         </div>
       )}
 
@@ -1261,7 +1421,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       )}
 
-      {/* Formulario de Nóminas & Gestión Dinámica (Modificación 1) */}
+      {/* 1. SECCIÓN: NÓMINAS DEL MES & GESTIÓN DE TRABAJOS */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
@@ -1279,7 +1439,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
             </button>
           </div>
 
-          {/* Panel de Gestión / Edición de Trabajos */}
+          {/* Panel de Gestión de Trabajos */}
           {isManageSourcesOpen && (
             <div className="p-4 bg-slate-50 rounded-2xl border border-blue-200/60 space-y-4 animate-fadeIn">
               <div className="flex items-center justify-between">
@@ -1287,7 +1447,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
                 <span className="text-[11px] text-slate-400">Añade o modifica tus fuentes</span>
               </div>
 
-              {/* Lista para editar / eliminar */}
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {(data.fuentesIngreso || []).map(fuente => {
                   const isEditing = editingSourceId === fuente.id;
@@ -1310,7 +1469,15 @@ const SueldoEngineView = ({ setActiveTab }) => {
                           className="w-24 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right"
                         />
                         <button
-                          onClick={() => handleSaveEditSource(fuente.id)}
+                          onClick={() => {
+                            if (editSourceName.trim()) {
+                              updateFuenteIngreso(fuente.id, {
+                                nombre: editSourceName.trim(),
+                                importeDefecto: parseFloat(editSourceAmt) || 0
+                              });
+                              setEditingSourceId(null);
+                            }
+                          }}
                           className="text-xs bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg"
                         >
                           Guardar
@@ -1358,11 +1525,17 @@ const SueldoEngineView = ({ setActiveTab }) => {
                 })}
               </div>
 
-              {/* Añadir nuevo trabajo */}
-              <form onSubmit={handleAddNewSource} className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (newSourceName.trim()) {
+                  addFuenteIngreso({ nombre: newSourceName, importeDefecto: newSourceDefaultAmt });
+                  setNewSourceName('');
+                  setNewSourceDefaultAmt('');
+                }
+              }} className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Nombre nuevo trabajo (ej. Colegio Nuevo)"
+                  placeholder="Nombre nuevo trabajo"
                   value={newSourceName}
                   onChange={(e) => setNewSourceName(e.target.value)}
                   className="flex-1 text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
@@ -1385,7 +1558,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
             </div>
           )}
 
-          {/* Formulario de Importes del Mes */}
           <div className="space-y-3">
             {(data.fuentesIngreso || []).map(fuente => (
               <div key={fuente.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -1479,38 +1651,329 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Gastos Fijos y Suscripciones bajo demanda */}
+      {/* 2. SECCIÓN: GASTOS FIJOS & SUSCRIPCIONES (CON EDICIÓN Y ELECCIÓN DE BANCO) */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <div>
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Icon name="creditCard" className="w-4 h-4 text-indigo-600" />
-            Gastos Fijos & Suscripciones (Activar cuando se cobren)
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Pulsa en "Registrar Pago" el día en que te llegue el cargo bancario para aplicarlo al saldo.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Icon name="creditCard" className="w-4 h-4 text-rose-600" />
+              Gastos Fijos & Suscripciones (Activar cuando se cobren)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Elige la cuenta bancaria de cargo y pulsa "Registrar Pago" el día que te pasen el recibo.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsManageFixedExpOpen(!isManageFixedExpOpen)}
+            className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
+          >
+            <Icon name="settings" className="w-3.5 h-3.5" />
+            {isManageFixedExpOpen ? 'Cerrar Edición' : 'Editar Gastos Fijos'}
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {(data.config?.gastosFijosDefecto || []).map((gf, idx) => (
-            <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2.5">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">{gf.nombre}</span>
-                <span className="text-[11px] text-slate-400">{gf.categoria}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                <span className="text-xs font-black text-slate-900 font-sans">
-                  {formatCurrency(gf.importe)}
-                </span>
-                <button
-                  onClick={() => handleQuickRegisterFixedExpense(gf)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg shadow-sm active:scale-95 transition-all"
-                >
-                  Registrar Pago
-                </button>
-              </div>
+        {/* Panel para Añadir / Gestionar Gastos Fijos */}
+        {isManageFixedExpOpen && (
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900">Añadir / Eliminar Gastos Fijos</span>
+              <span className="text-[11px] text-slate-400">Personaliza tus recibos mensuales</span>
             </div>
-          ))}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {(data.config?.gastosFijosDefecto || []).map((gf, idx) => (
+                <div key={gf.id || idx} className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800 block">{gf.nombre}</span>
+                    <span className="text-[10px] text-slate-400">{gf.categoria} • {formatCurrency(gf.importe)}</span>
+                  </div>
+                  <button
+                    onClick={() => deleteGastoFijo(gf.id || gf.nombre)}
+                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100"
+                  >
+                    <Icon name="trash" className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (newFixedExpName.trim() && newFixedExpAmt) {
+                addGastoFijo({
+                  nombre: newFixedExpName,
+                  categoria: newFixedExpCategory,
+                  cuenta: newFixedExpAccount,
+                  importe: newFixedExpAmt
+                });
+                setNewFixedExpName('');
+                setNewFixedExpAmt('');
+              }
+            }} className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <input
+                type="text"
+                placeholder="Nombre (ej. Gimnasio)"
+                value={newFixedExpName}
+                onChange={(e) => setNewFixedExpName(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+              />
+              <select
+                value={newFixedExpCategory}
+                onChange={(e) => setNewFixedExpCategory(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+              >
+                {(data.categorias || []).filter(c => c.tipo === 'gasto').map(c => (
+                  <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Importe €"
+                value={newFixedExpAmt}
+                onChange={(e) => setNewFixedExpAmt(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-right font-bold"
+              />
+              <button
+                type="submit"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl"
+              >
+                + Guardar
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Tarjetas de Gastos Fijos con selección de cuenta e importe in-situ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {(data.config?.gastosFijosDefecto || []).map((gf, idx) => {
+            const currentSelection = fixedExpSelections[gf.id || idx] || {};
+            const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-santander';
+            const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : gf.importe;
+
+            return (
+              <div key={gf.id || idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <span className="text-xs font-bold text-slate-900 block truncate">{gf.nombre}</span>
+                    <span className="text-[10px] font-semibold text-slate-400">{gf.categoria}</span>
+                  </div>
+
+                  {/* Selector de Cuenta de Cargo */}
+                  <div className="mt-2 flex items-center justify-between gap-1 text-[11px]">
+                    <span className="text-slate-400 font-medium">Cuenta:</span>
+                    <select
+                      value={currentAcc}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFixedExpSelections(prev => ({
+                          ...prev,
+                          [gf.id || idx]: { ...prev[gf.id || idx], cuenta: val }
+                        }));
+                      }}
+                      className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
+                    >
+                      {(data.cuentas || []).filter(c => c.activa).map(c => (
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currentAmt}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFixedExpSelections(prev => ({
+                          ...prev,
+                          [gf.id || idx]: { ...prev[gf.id || idx], importe: val }
+                        }));
+                      }}
+                      className="w-full text-xs font-black text-slate-900 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right font-sans"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => handleQuickRegisterFixedExpense(gf, idx)}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                  >
+                    Pagar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. SECCIÓN: INGRESOS FIJOS & BENEFICIOS BANCARIOS (BBVA + SABADELL REMUNERADA) */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Icon name="sparkles" className="w-4 h-4 text-emerald-600" />
+              Ingresos Fijos & Beneficios Bancarios (BBVA, Sabadell Remunerada...)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Registra cobros periódicos de cuentas remuneradas o bonificaciones bancarias con 1 solo clic.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsManageFixedIncOpen(!isManageFixedIncOpen)}
+            className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
+          >
+            <Icon name="settings" className="w-3.5 h-3.5" />
+            {isManageFixedIncOpen ? 'Cerrar Edición' : 'Editar Beneficios'}
+          </button>
+        </div>
+
+        {/* Panel de Edición de Beneficios */}
+        {isManageFixedIncOpen && (
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900">Añadir / Eliminar Ingresos Fijos</span>
+              <span className="text-[11px] text-slate-400">Configura tus beneficios recurrentes</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {(data.config?.ingresosFijosDefecto || []).map((inc, idx) => (
+                <div key={inc.id || idx} className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800 block">{inc.nombre}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {(data.cuentas || []).find(c => c.id === inc.cuenta)?.nombre || 'Cuenta'} • {inc.isVariable ? 'Importe Variable' : formatCurrency(inc.importe)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => deleteIngresoFijo(inc.id || inc.nombre)}
+                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100"
+                  >
+                    <Icon name="trash" className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (newFixedIncName.trim()) {
+                addIngresoFijo({
+                  nombre: newFixedIncName,
+                  categoria: newFixedIncCategory,
+                  cuenta: newFixedIncAccount,
+                  importe: newFixedIncAmt || 0,
+                  isVariable: newFixedIncIsVariable
+                });
+                setNewFixedIncName('');
+                setNewFixedIncAmt('');
+              }
+            }} className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <input
+                type="text"
+                placeholder="Nombre beneficio"
+                value={newFixedIncName}
+                onChange={(e) => setNewFixedIncName(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+              />
+              <select
+                value={newFixedIncAccount}
+                onChange={(e) => setNewFixedIncAccount(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+              >
+                {(data.cuentas || []).filter(c => c.activa).map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Importe base €"
+                value={newFixedIncAmt}
+                onChange={(e) => setNewFixedIncAmt(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-right font-bold"
+              />
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl"
+              >
+                + Guardar
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Tarjetas de Beneficios */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(data.config?.ingresosFijosDefecto || []).map((inc, idx) => {
+            const currentSelection = fixedIncSelections[inc.id || idx] || {};
+            const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
+            const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : (inc.isVariable ? '' : inc.importe);
+            const accObj = (data.cuentas || []).find(c => c.id === currentAcc);
+
+            return (
+              <div key={inc.id || idx} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 block truncate">{inc.nombre}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      {inc.isVariable ? 'Variable' : 'Fijo'}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-1 text-[11px]">
+                    <span className="text-slate-500 font-medium">Destino:</span>
+                    <select
+                      value={currentAcc}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFixedIncSelections(prev => ({
+                          ...prev,
+                          [inc.id || idx]: { ...prev[inc.id || idx], cuenta: val }
+                        }));
+                      }}
+                      className="bg-white border border-emerald-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
+                    >
+                      {(data.cuentas || []).filter(c => c.activa).map(c => (
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60 gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={inc.isVariable ? "Escribir importe €" : "0.00"}
+                      value={currentAmt}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFixedIncSelections(prev => ({
+                          ...prev,
+                          [inc.id || idx]: { ...prev[inc.id || idx], importe: val }
+                        }));
+                      }}
+                      className="w-full text-xs font-black text-slate-900 bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-right font-sans focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => handleQuickRegisterFixedIncome(inc, idx)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                  >
+                    Registrar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1518,7 +1981,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS
+// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS (Modificación 2)
 // ==========================================
 const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) => {
   const { data, deleteMovimiento } = useFinance();
@@ -1529,7 +1992,18 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
   const [selectedCategory, setSelectedCategory] = useState('todas');
   const [selectedMonth, setSelectedMonth] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 30;
+
+  // Modificación 2: Vista Lista Detallada vs Vista Compacta por Fechas
+  const [viewMode, setViewMode] = useState('compactByDate'); // 'compactByDate' | 'detailed'
+  const [expandedDates, setExpandedDates] = useState(() => ({}));
+
+  const toggleDateExpand = (dateKey) => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [dateKey]: prev[dateKey] === undefined ? false : !prev[dateKey]
+    }));
+  };
 
   const availableMonths = useMemo(() => {
     const months = new Set();
@@ -1577,6 +2051,30 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
     return { gastos, ingresos, balance: ingresos - gastos };
   }, [filteredMovimientos]);
 
+  // Agrupación por fecha
+  const groupedByDate = useMemo(() => {
+    const map = {};
+    filteredMovimientos.forEach(m => {
+      const d = m.fecha || 'Sin fecha';
+      if (!map[d]) {
+        map[d] = {
+          fecha: d,
+          movimientos: [],
+          totalGastos: 0,
+          totalIngresos: 0,
+          totalTransferencias: 0
+        };
+      }
+      map[d].movimientos.push(m);
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'gasto') map[d].totalGastos += imp;
+      if (m.tipo === 'ingreso') map[d].totalIngresos += imp;
+      if (m.tipo === 'transferencia') map[d].totalTransferencias += imp;
+    });
+
+    return Object.values(map).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }, [filteredMovimientos]);
+
   const totalPages = Math.ceil(filteredMovimientos.length / itemsPerPage) || 1;
   const paginatedMovimientos = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -1592,6 +2090,7 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
 
   return (
     <div className="space-y-5 pb-24 md:pb-8">
+      {/* Barra de Filtros */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
@@ -1642,9 +2141,34 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
         </div>
 
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="text-slate-500 font-medium">
-            Mostrando <strong>{filteredMovimientos.length}</strong> movimientos
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 font-medium">
+              <strong>{filteredMovimientos.length}</strong> movimientos en <strong>{groupedByDate.length}</strong> días
+            </span>
+
+            {/* Alternador de Vista (Modificación 2) */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl ml-2">
+              <button
+                onClick={() => setViewMode('compactByDate')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  viewMode === 'compactByDate' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="layers" className="w-3.5 h-3.5" />
+                Por Fechas
+              </button>
+              <button
+                onClick={() => setViewMode('detailed')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  viewMode === 'detailed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="list" className="w-3.5 h-3.5" />
+                Lista
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <span className="text-slate-600">
               Gastos: <strong className="text-rose-600 font-sans">-{formatCurrency(filteredTotals.gastos)}</strong>
@@ -1656,130 +2180,270 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {paginatedMovimientos.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-xs">
+      {/* VISTA 1: COMPACTADA POR FECHAS (Modificación 2) */}
+      {viewMode === 'compactByDate' && (
+        <div className="space-y-3">
+          {groupedByDate.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200">
               No se han encontrado movimientos con los filtros seleccionados.
             </div>
           ) : (
-            paginatedMovimientos.map(m => {
-              const isGasto = m.tipo === 'gasto';
-              const isIngreso = m.tipo === 'ingreso';
-              const isTransfer = m.tipo === 'transferencia';
-
-              const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
-              const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+            groupedByDate.map(group => {
+              const isExpanded = expandedDates[group.fecha] !== false; // Abierto por defecto
 
               return (
-                <div
-                  key={m.id}
-                  onClick={() => onEditModal(m)}
-                  className="p-3.5 sm:p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isGasto ? 'bg-rose-50 text-rose-600' :
-                      isIngreso ? 'bg-emerald-50 text-emerald-600' :
-                      'bg-sky-50 text-sky-600'
-                    }`}>
+                <div key={group.fecha} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all">
+                  {/* Cabecera del Día (Acordeón) */}
+                  <div
+                    onClick={() => toggleDateExpand(group.fecha)}
+                    className="p-4 bg-slate-50/70 hover:bg-slate-100/70 transition-colors flex items-center justify-between cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-slate-200/70 flex items-center justify-center text-slate-700">
+                        <Icon name="calendar" className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 block">
+                          {formatDateFull(group.fecha)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {group.movimientos.length} {group.movimientos.length === 1 ? 'movimiento' : 'movimientos'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {group.totalGastos > 0 && (
+                        <span className="text-xs font-bold text-rose-600 font-sans">
+                          -{formatCurrency(group.totalGastos)}
+                        </span>
+                      )}
+                      {group.totalIngresos > 0 && (
+                        <span className="text-xs font-bold text-emerald-600 font-sans">
+                          +{formatCurrency(group.totalIngresos)}
+                        </span>
+                      )}
                       <Icon
-                        name={isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer'}
-                        className="w-4 h-4"
+                        name={isExpanded ? 'chevronUp' : 'chevronDown'}
+                        className="w-4 h-4 text-slate-400"
                       />
                     </div>
+                  </div>
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                          {m.categoria || (isTransfer ? 'Transferencia' : 'General')}
-                        </span>
-                        {m.comentario && (
-                          <span className="text-xs text-slate-500 truncate max-w-[140px] sm:max-w-md">
-                            • {m.comentario}
-                          </span>
-                        )}
-                      </div>
+                  {/* Movimientos del Día */}
+                  {isExpanded && (
+                    <div className="divide-y divide-slate-100 border-t border-slate-100">
+                      {group.movimientos.map(m => {
+                        const isGasto = m.tipo === 'gasto';
+                        const isIngreso = m.tipo === 'ingreso';
+                        const isTransfer = m.tipo === 'transferencia';
 
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="font-semibold text-slate-600">{formatDate(m.fecha)}</span>
-                        <span>•</span>
-                        {isTransfer ? (
-                          <span>
-                            <strong className="text-slate-700">{origAcc?.nombre || 'Origen'}</strong> → <strong className="text-slate-700">{destAcc?.nombre || 'Destino'}</strong>
-                          </span>
-                        ) : isGasto ? (
-                          <span>Cuenta: <strong className="text-slate-700">{origAcc?.nombre || 'General'}</strong></span>
-                        ) : (
-                          <span>Destino: <strong className="text-slate-700">{destAcc?.nombre || 'General'}</strong></span>
-                        )}
-                      </div>
+                        const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+                        const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() => onEditModal(m)}
+                            className="p-3.5 sm:p-4 hover:bg-slate-50/50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                isGasto ? 'bg-rose-50 text-rose-600' :
+                                isIngreso ? 'bg-emerald-50 text-emerald-600' :
+                                'bg-sky-50 text-sky-600'
+                              }`}>
+                                <Icon
+                                  name={isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer'}
+                                  className="w-3.5 h-3.5"
+                                />
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                    {m.categoria || (isTransfer ? 'Transferencia' : 'General')}
+                                  </span>
+                                  {m.comentario && (
+                                    <span className="text-xs text-slate-500 truncate max-w-[140px] sm:max-w-md">
+                                      • {m.comentario}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                  {isTransfer ? (
+                                    <span>
+                                      <strong className="text-slate-700">{origAcc?.nombre || 'Origen'}</strong> → <strong className="text-slate-700">{destAcc?.nombre || 'Destino'}</strong>
+                                    </span>
+                                  ) : isGasto ? (
+                                    <span>Cuenta: <strong className="text-slate-700">{origAcc?.nombre || 'General'}</strong></span>
+                                  ) : (
+                                    <span>Destino: <strong className="text-slate-700">{destAcc?.nombre || 'General'}</strong></span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className={`text-xs sm:text-sm font-bold font-sans ${
+                                isGasto ? 'text-slate-900' :
+                                isIngreso ? 'text-emerald-600' :
+                                'text-sky-700'
+                              }`}>
+                                {isGasto ? `-${formatCurrency(m.importe)}` :
+                                 isIngreso ? `+${formatCurrency(m.importe)}` :
+                                 `⇄ ${formatCurrency(m.importe)}`}
+                              </span>
+
+                              <button
+                                onClick={(e) => handleDelete(m.id, e)}
+                                title="Eliminar movimiento"
+                                className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 transition-opacity"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-xs sm:text-sm font-bold font-sans ${
-                      isGasto ? 'text-slate-900' :
-                      isIngreso ? 'text-emerald-600' :
-                      'text-sky-700'
-                    }`}>
-                      {isGasto ? `-${formatCurrency(m.importe)}` :
-                       isIngreso ? `+${formatCurrency(m.importe)}` :
-                       `⇄ ${formatCurrency(m.importe)}`}
-                    </span>
-
-                    <button
-                      onClick={(e) => handleDelete(m.id, e)}
-                      title="Eliminar movimiento"
-                      className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 transition-opacity"
-                    >
-                      <Icon name="trash" className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })
           )}
         </div>
+      )}
 
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-400">
-              Página {currentPage} de {totalPages}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
-              >
-                Anterior
-              </button>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
-              >
-                Siguiente
-              </button>
-            </div>
+      {/* VISTA 2: LISTA TRADICIONAL PAGINADA */}
+      {viewMode === 'detailed' && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div className="divide-y divide-slate-100">
+            {paginatedMovimientos.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                No se han encontrado movimientos con los filtros seleccionados.
+              </div>
+            ) : (
+              paginatedMovimientos.map(m => {
+                const isGasto = m.tipo === 'gasto';
+                const isIngreso = m.tipo === 'ingreso';
+                const isTransfer = m.tipo === 'transferencia';
+
+                const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+                const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => onEditModal(m)}
+                    className="p-3.5 sm:p-4 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isGasto ? 'bg-rose-50 text-rose-600' :
+                        isIngreso ? 'bg-emerald-50 text-emerald-600' :
+                        'bg-sky-50 text-sky-600'
+                      }`}>
+                        <Icon
+                          name={isGasto ? 'arrowUpRight' : isIngreso ? 'arrowDownLeft' : 'transfer'}
+                          className="w-4 h-4"
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {m.categoria || (isTransfer ? 'Transferencia' : 'General')}
+                          </span>
+                          {m.comentario && (
+                            <span className="text-xs text-slate-500 truncate max-w-[140px] sm:max-w-md">
+                              • {m.comentario}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span className="font-semibold text-slate-600">{formatDate(m.fecha)}</span>
+                          <span>•</span>
+                          {isTransfer ? (
+                            <span>
+                              <strong className="text-slate-700">{origAcc?.nombre || 'Origen'}</strong> → <strong className="text-slate-700">{destAcc?.nombre || 'Destino'}</strong>
+                            </span>
+                          ) : isGasto ? (
+                            <span>Cuenta: <strong className="text-slate-700">{origAcc?.nombre || 'General'}</strong></span>
+                          ) : (
+                            <span>Destino: <strong className="text-slate-700">{destAcc?.nombre || 'General'}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-xs sm:text-sm font-bold font-sans ${
+                        isGasto ? 'text-slate-900' :
+                        isIngreso ? 'text-emerald-600' :
+                        'text-sky-700'
+                      }`}>
+                        {isGasto ? `-${formatCurrency(m.importe)}` :
+                         isIngreso ? `+${formatCurrency(m.importe)}` :
+                         `⇄ ${formatCurrency(m.importe)}`}
+                      </span>
+
+                      <button
+                        onClick={(e) => handleDelete(m.id, e)}
+                        title="Eliminar movimiento"
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 transition-opacity"
+                      >
+                        <Icon name="trash" className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
-        )}
-      </div>
+
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-400">
+                Página {currentPage} de {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
+                >
+                  Anterior
+                </button>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 disabled:opacity-30"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 // ==========================================
-// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR (Modificación 3)
+// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR
 // ==========================================
 const AnaliticaView = () => {
   const { data, saldos, totalPatrimonio } = useFinance();
 
-  const [periodoFilter, setPeriodoFilter] = useState('2026'); // '2026', 'mes', '6m', '3m', 'all'
+  const [periodoFilter, setPeriodoFilter] = useState('2026');
   const [selectedSpecificMonth, setSelectedSpecificMonth] = useState('2026-08');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
 
   const availableMonths = useMemo(() => {
     const months = new Set();
@@ -1791,7 +2455,6 @@ const AnaliticaView = () => {
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
 
-  // Movimientos filtrados para el análisis
   const analysisMovements = useMemo(() => {
     return (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
@@ -1808,7 +2471,6 @@ const AnaliticaView = () => {
     });
   }, [data.movimientos, periodoFilter, selectedSpecificMonth, selectedCategoryFilter, availableMonths]);
 
-  // Métricas Clave Consolidadas
   const periodKpis = useMemo(() => {
     let ingresos = 0;
     let gastos = 0;
@@ -1829,7 +2491,6 @@ const AnaliticaView = () => {
     return { ingresos, gastos, transferencias, balance, tasaAhorro, mediaGastoDiario };
   }, [analysisMovements, periodoFilter]);
 
-  // Desglose por Categorías
   const categoryExpenses = useMemo(() => {
     const map = {};
     let totalGasto = 0;
@@ -1852,7 +2513,6 @@ const AnaliticaView = () => {
       .sort((a, b) => b.importe - a.importe);
   }, [analysisMovements]);
 
-  // Comparativa Mensual de Ingresos vs Gastos vs Ahorro
   const monthlyComparison = useMemo(() => {
     const map = {};
 
@@ -1875,9 +2535,6 @@ const AnaliticaView = () => {
     if (periodoFilter === 'mes') return sorted.filter(m => m.mes === selectedSpecificMonth);
     return sorted;
   }, [data.movimientos, periodoFilter, selectedSpecificMonth]);
-
-  // Evolución del Patrimonio Neto Disponible (Calculado por cuenta respetando incluirEnTotal)
-  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
 
   const patrimonioEvolution = useMemo(() => {
     const activeCuentasMap = {};
@@ -1966,13 +2623,11 @@ const AnaliticaView = () => {
     return Math.max(...monthlyComparison.map(m => Math.max(m.ingresos, m.gastos)), 1000);
   }, [monthlyComparison]);
 
-  // Exportador de Excel que replica la plantilla original
   const handleExportReplicatedExcel = () => {
     const targetMonth = periodoFilter === 'mes' ? selectedSpecificMonth : '2026-08';
     const monthName = formatMonthName(targetMonth);
     const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(targetMonth));
 
-    // Construcción en formato XML / HTML compatible 100% con Microsoft Excel (.xls)
     let excelHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -2060,7 +2715,7 @@ const AnaliticaView = () => {
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Barra de Control y Acciones Destacadas */}
+      {/* Barra de Control */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 mb-1">
@@ -2072,7 +2727,6 @@ const AnaliticaView = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Presentación / Informe Ejecutivo */}
           <button
             onClick={() => setIsReportModalOpen(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
@@ -2081,7 +2735,6 @@ const AnaliticaView = () => {
             Informe Ejecutivo
           </button>
 
-          {/* Botón Descargar Plantilla Excel Replicada */}
           <button
             onClick={handleExportReplicatedExcel}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
@@ -2092,7 +2745,7 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* Barra de Filtros Multidimensional */}
+      {/* Barra de Filtros */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold text-slate-700">Período:</span>
@@ -2144,7 +2797,7 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* KPI Cards del Período */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
           <span className="text-xs font-medium text-slate-400">Ingresos Totales</span>
@@ -2249,7 +2902,7 @@ const AnaliticaView = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 2: Comparativa de Ingresos vs Gastos con Nombres de Meses en Español */}
+        {/* Gráfico 2: Comparativa de Ingresos vs Gastos */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Icon name="chart" className="w-4 h-4 text-emerald-600" />
@@ -2305,7 +2958,7 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* MODAL / VISTA DE INFORME EJECUTIVO & PRESENTACIÓN (Modificación 3) */}
+      {/* MODAL DE INFORME EJECUTIVO */}
       {isReportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
@@ -2330,7 +2983,6 @@ const AnaliticaView = () => {
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto">
-              {/* Resumen Narrativo */}
               <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
                 <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                   <Icon name="sparkles" className="w-4 h-4 text-blue-600" />
@@ -2341,7 +2993,6 @@ const AnaliticaView = () => {
                 </p>
               </div>
 
-              {/* Métricas Destacadas */}
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="text-[11px] text-slate-400 block font-medium">Ingreso Promedio</span>
@@ -2363,7 +3014,6 @@ const AnaliticaView = () => {
                 </div>
               </div>
 
-              {/* Top 5 Categorías de Mayor Gasto */}
               <div>
                 <h4 className="text-xs font-bold text-slate-900 mb-2.5">Top Categorías de Gasto</h4>
                 <div className="space-y-2">

@@ -10,28 +10,50 @@
     "inversionFija": 60.0,
     "gastosFijosDefecto": [
       {
+        "id": "gf-1",
         "nombre": "Alquiler + Gastos Casa",
         "categoria": "Alquiler",
         "cuenta": "acc-santander",
         "importe": 325.0
       },
       {
+        "id": "gf-2",
         "nombre": "Spotify",
         "categoria": "Suscripciones",
         "cuenta": "acc-santander",
         "importe": 6.49
       },
       {
+        "id": "gf-3",
         "nombre": "Basic Fit",
         "categoria": "Suscripciones",
         "cuenta": "acc-santander",
         "importe": 24.99
       },
       {
+        "id": "gf-4",
         "nombre": "AppleCare+",
         "categoria": "Suscripciones",
         "cuenta": "acc-santander",
         "importe": 5.49
+      }
+    ],
+    "ingresosFijosDefecto": [
+      {
+        "id": "if-1",
+        "nombre": "Beneficio Cuenta BBVA",
+        "categoria": "Otros Ingresos",
+        "cuenta": "acc-bbva",
+        "importe": 16.2,
+        "isVariable": false
+      },
+      {
+        "id": "if-2",
+        "nombre": "Intereses Sabadell Remunerada",
+        "categoria": "Inversiones",
+        "cuenta": "acc-sab-ahorro",
+        "importe": 23.11,
+        "isVariable": true
       }
     ]
   },
