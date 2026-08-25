@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "clientUpdated": "2026-08-25T13:16:50Z",
+  "clientUpdated": "2026-08-25T13:25:50Z",
   "config": {
     "repartoSueldo": {
       "irpf": 0.18,
@@ -43,7 +43,7 @@
       "activa": true,
       "incluirEnTotal": true,
       "color": "#DC2626",
-      "saldoInicial": 145.3
+      "saldoInicial": 175.77
     },
     {
       "id": "acc-bbva",
@@ -52,7 +52,7 @@
       "activa": true,
       "incluirEnTotal": true,
       "color": "#1E3A8A",
-      "saldoInicial": 180.69
+      "saldoInicial": 234.67
     },
     {
       "id": "acc-sab-ahorro",
@@ -61,7 +61,7 @@
       "activa": true,
       "incluirEnTotal": true,
       "color": "#0284C7",
-      "saldoInicial": 1143.97
+      "saldoInicial": 1239.81
     },
     {
       "id": "acc-sab-irpf",
@@ -70,7 +70,7 @@
       "activa": true,
       "incluirEnTotal": false,
       "color": "#0EA5E9",
-      "saldoInicial": 202.04
+      "saldoInicial": 202.16
     },
     {
       "id": "acc-trade",
@@ -79,7 +79,7 @@
       "activa": true,
       "incluirEnTotal": true,
       "color": "#18181B",
-      "saldoInicial": 0.0
+      "saldoInicial": -313.25
     },
     {
       "id": "acc-efectivo",
@@ -88,7 +88,7 @@
       "activa": true,
       "incluirEnTotal": true,
       "color": "#16A34A",
-      "saldoInicial": 260.0
+      "saldoInicial": 810.0
     }
   ],
   "categorias": [

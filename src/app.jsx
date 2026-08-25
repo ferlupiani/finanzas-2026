@@ -1,7 +1,7 @@
 const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext, Component } = React;
 
 // ==========================================
-// 🛡️ ERROR BOUNDARY (Evita pantallas blancas)
+// 🛡️ ERROR BOUNDARY
 // ==========================================
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -78,7 +78,6 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     check: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />,
     refresh: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />,
     cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />,
-    cloudOff: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />,
     settings: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />,
     chart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
     home: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
@@ -88,7 +87,9 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     x: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />,
     pieChart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />,
     dollar: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
-    checkCircle: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    presentation: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />,
+    table: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
+    sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
   };
 
   return (
@@ -99,7 +100,7 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
 };
 
 // ==========================================
-// 💶 UTILIDADES DE FORMATO & CUENTAS
+// 💶 FORMATO Y UTILIDADES
 // ==========================================
 const formatCurrency = (val) => {
   const num = typeof val === 'number' ? val : parseFloat(val) || 0;
@@ -115,19 +116,16 @@ const formatDate = (dateStr) => {
   if (!dateStr) return '';
   try {
     const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   } catch (e) {
     return dateStr;
   }
 };
 
-// Modificación 3: Formatear meses como "Agosto 2026", "Enero 2026", etc.
 const formatMonthName = (monthKey) => {
   if (!monthKey || monthKey === 'todos') return 'Todos los meses';
-  const parts = monthKey.split('-');
+  const parts = monthKey.replace('.', '-').split('-');
   if (parts.length === 2) {
     const year = parts[0];
     const month = parseInt(parts[1], 10);
@@ -147,20 +145,13 @@ const getAccountBadge = (accId, cuentas = []) => {
   if (!acc) return { nombre: 'Desconocida', color: '#64748b', bgClass: 'bg-slate-100 text-slate-700 border-slate-200' };
 
   switch (acc.id) {
-    case 'acc-santander':
-      return { ...acc, bgClass: 'bg-red-50 text-red-700 border-red-200' };
-    case 'acc-bbva':
-      return { ...acc, bgClass: 'bg-blue-50 text-blue-900 border-blue-200' };
-    case 'acc-sab-ahorro':
-      return { ...acc, bgClass: 'bg-sky-50 text-sky-700 border-sky-200' };
-    case 'acc-sab-irpf':
-      return { ...acc, bgClass: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
-    case 'acc-trade':
-      return { ...acc, bgClass: 'bg-zinc-100 text-zinc-900 border-zinc-300' };
-    case 'acc-efectivo':
-      return { ...acc, bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
-    default:
-      return { ...acc, bgClass: 'bg-slate-100 text-slate-800 border-slate-200' };
+    case 'acc-santander': return { ...acc, bgClass: 'bg-red-50 text-red-700 border-red-200' };
+    case 'acc-bbva': return { ...acc, bgClass: 'bg-blue-50 text-blue-900 border-blue-200' };
+    case 'acc-sab-ahorro': return { ...acc, bgClass: 'bg-sky-50 text-sky-700 border-sky-200' };
+    case 'acc-sab-irpf': return { ...acc, bgClass: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
+    case 'acc-trade': return { ...acc, bgClass: 'bg-zinc-100 text-zinc-900 border-zinc-300' };
+    case 'acc-efectivo': return { ...acc, bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+    default: return { ...acc, bgClass: 'bg-slate-100 text-slate-800 border-slate-200' };
   }
 };
 
@@ -174,7 +165,7 @@ const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 
 const defaultFallbackData = {
-  version: '1.1',
+  version: '1.2',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: { irpf: 0.18, ahorro: 0.50, gasto: 0.32 },
@@ -187,12 +178,12 @@ const defaultFallbackData = {
     ]
   },
   cuentas: [
-    { id: 'acc-santander', nombre: 'Santander', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#DC2626', saldoInicial: 145.30 },
-    { id: 'acc-bbva', nombre: 'BBVA', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#1E3A8A', saldoInicial: 180.69 },
-    { id: 'acc-sab-ahorro', nombre: 'Sabadell Ahorro', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#0284C7', saldoInicial: 1143.97 },
-    { id: 'acc-sab-irpf', nombre: 'Sabadell IRPF', tipo: 'banco', activa: true, incluirEnTotal: false, color: '#0EA5E9', saldoInicial: 202.04 },
-    { id: 'acc-trade', nombre: 'Trade Republic', tipo: 'inversion', activa: true, incluirEnTotal: true, color: '#18181B', saldoInicial: 0.00 },
-    { id: 'acc-efectivo', nombre: 'Efectivo', tipo: 'metalico', activa: true, incluirEnTotal: true, color: '#16A34A', saldoInicial: 260.00 }
+    { id: 'acc-santander', nombre: 'Santander', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#DC2626', saldoInicial: 175.77 },
+    { id: 'acc-bbva', nombre: 'BBVA', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#1E3A8A', saldoInicial: 234.67 },
+    { id: 'acc-sab-ahorro', nombre: 'Sabadell Ahorro', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#0284C7', saldoInicial: 1239.81 },
+    { id: 'acc-sab-irpf', nombre: 'Sabadell IRPF', tipo: 'banco', activa: true, incluirEnTotal: false, color: '#0EA5E9', saldoInicial: 202.16 },
+    { id: 'acc-trade', nombre: 'Trade Republic', tipo: 'inversion', activa: true, incluirEnTotal: true, color: '#18181B', saldoInicial: -313.25 },
+    { id: 'acc-efectivo', nombre: 'Efectivo', tipo: 'metalico', activa: true, incluirEnTotal: true, color: '#16A34A', saldoInicial: 810.00 }
   ],
   categorias: [
     { id: 'cat-alquiler', nombre: 'Alquiler', tipo: 'gasto', color: '#ef4444' },
@@ -227,7 +218,6 @@ const defaultFallbackData = {
   movimientos: []
 };
 
-// Normalizar y ordenar de forma descendente por fecha
 const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
   if (!input || typeof input !== 'object') return fallback;
 
@@ -250,7 +240,6 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     movimientos = fallback.movimientos;
   }
 
-  // Modificación 1: Ordenar estrictamente de más reciente a más antiguo
   movimientos.sort((a, b) => {
     const dateComp = (b.fecha || '').localeCompare(a.fecha || '');
     if (dateComp !== 0) return dateComp;
@@ -258,7 +247,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
   });
 
   return {
-    version: input.version || '1.1',
+    version: input.version || '1.2',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -298,7 +287,6 @@ const FinanceProvider = ({ children }) => {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const isSyncingRef = useRef(false);
 
-  // Carga inicial desde data.json si el estado local no tiene movimientos
   useEffect(() => {
     const loadInitialDataFile = async () => {
       try {
@@ -317,7 +305,7 @@ const FinanceProvider = ({ children }) => {
           });
         }
       } catch (err) {
-        console.log('No external data.json found or fetch failed');
+        console.log('No external data.json found');
       }
     };
     loadInitialDataFile();
@@ -325,11 +313,8 @@ const FinanceProvider = ({ children }) => {
 
   const setFirebaseUrl = (url) => {
     setFirebaseUrlState(url);
-    if (url) {
-      localStorage.setItem(FIREBASE_URL_KEY, url);
-    } else {
-      localStorage.removeItem(FIREBASE_URL_KEY);
-    }
+    if (url) localStorage.setItem(FIREBASE_URL_KEY, url);
+    else localStorage.removeItem(FIREBASE_URL_KEY);
   };
 
   const updateAndSyncData = useCallback(async (updater) => {
@@ -475,6 +460,35 @@ const FinanceProvider = ({ children }) => {
     }));
   };
 
+  // Modificación 1: Gestión de Fuentes de Ingreso / Nóminas (Añadir, Editar, Eliminar)
+  const addFuenteIngreso = ({ nombre, importeDefecto }) => {
+    const newId = `src-${Date.now()}`;
+    const newFuente = {
+      id: newId,
+      nombre: nombre.trim(),
+      importeDefecto: parseFloat(importeDefecto) || 0.00
+    };
+    updateAndSyncData(prev => ({
+      ...prev,
+      fuentesIngreso: [...(prev.fuentesIngreso || []), newFuente]
+    }));
+    return newFuente;
+  };
+
+  const updateFuenteIngreso = (id, fields) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      fuentesIngreso: (prev.fuentesIngreso || []).map(f => f.id === id ? { ...f, ...fields } : f)
+    }));
+  };
+
+  const deleteFuenteIngreso = (id) => {
+    updateAndSyncData(prev => ({
+      ...prev,
+      fuentesIngreso: (prev.fuentesIngreso || []).filter(f => f.id !== id)
+    }));
+  };
+
   const distribuirSueldo = ({ fecha, incomes, irpfPct, ahorroPct, gastoPct, inversionFija, cuentaIngreso = 'acc-santander' }) => {
     const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
     if (totalIngreso <= 0) return false;
@@ -564,18 +578,10 @@ const FinanceProvider = ({ children }) => {
     }));
   };
 
-  // Modificación 4: Alternar si una cuenta se incluye en el cálculo del Total
   const toggleIncluirEnTotal = (id) => {
     updateAndSyncData(prev => ({
       ...prev,
       cuentas: (prev.cuentas || []).map(c => c.id === id ? { ...c, incluirEnTotal: !c.incluirEnTotal } : c)
-    }));
-  };
-
-  const addCuenta = (cuenta) => {
-    updateAndSyncData(prev => ({
-      ...prev,
-      cuentas: [...(prev.cuentas || []), { ...cuenta, id: `acc-${Date.now()}`, activa: true, incluirEnTotal: true }]
     }));
   };
 
@@ -603,7 +609,7 @@ const FinanceProvider = ({ children }) => {
     return false;
   };
 
-  // Cálculo reactivo de saldos
+  // Cálculo exacto de saldos
   const saldos = useMemo(() => {
     const bal = {};
     (data.cuentas || []).forEach(c => {
@@ -626,21 +632,18 @@ const FinanceProvider = ({ children }) => {
     return bal;
   }, [data.cuentas, data.movimientos]);
 
-  // Modificación 4: Total disponible (solo cuentas con incluirEnTotal !== false)
   const totalPatrimonioDisponible = useMemo(() => {
     return (data.cuentas || [])
       .filter(c => c && c.activa && c.incluirEnTotal !== false)
       .reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
 
-  // Total absoluto (incluyendo Sabadell IRPF)
   const totalPatrimonioAbsoluto = useMemo(() => {
     return (data.cuentas || [])
       .filter(c => c && c.activa)
       .reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
 
-  // Saldo de Sabadell IRPF separado
   const saldoIrpfSeparado = useMemo(() => {
     return saldos['acc-sab-irpf'] || 0;
   }, [saldos]);
@@ -660,11 +663,13 @@ const FinanceProvider = ({ children }) => {
       addMovimiento,
       updateMovimiento,
       deleteMovimiento,
+      addFuenteIngreso,
+      updateFuenteIngreso,
+      deleteFuenteIngreso,
       distribuirSueldo,
       updateConfig,
       toggleCuenta,
       toggleIncluirEnTotal,
-      addCuenta,
       importJsonData,
       resetToOriginalData
     }}>
@@ -676,7 +681,7 @@ const FinanceProvider = ({ children }) => {
 const useFinance = () => useContext(FinanceContext);
 
 // ==========================================
-// 🧭 NAVBAR & SYNC STATUS BADGE
+// 🧭 NAVBAR & STATUS
 // ==========================================
 const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
   const { syncStatus, syncNow } = useFinance();
@@ -701,13 +706,12 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
           </div>
         </div>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: 'home' },
             { id: 'sueldo', label: 'Motor Sueldo & Fijos', icon: 'zap' },
             { id: 'movimientos', label: 'Movimientos', icon: 'creditCard' },
-            { id: 'analitica', label: 'Analítica', icon: 'chart' },
+            { id: 'analitica', label: 'Analítica & Reportes', icon: 'chart' },
             { id: 'ajustes', label: 'Ajustes', icon: 'settings' }
           ].map(tab => (
             <button
@@ -728,7 +732,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={syncNow}
-            title="Pulsar para forzar sincronización con Firebase"
+            title="Forzar sincronización con Firebase"
             className={`flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${syncInfo.pill}`}
           >
             <span className={`w-2 h-2 rounded-full ${syncInfo.color}`}></span>
@@ -750,7 +754,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
 };
 
 // ==========================================
-// 📱 BOTTOM NAVIGATION
+// 📱 BOTTOM NAV
 // ==========================================
 const BottomNav = ({ activeTab, setActiveTab, onOpenNewModal }) => {
   const tabs = [
@@ -758,7 +762,7 @@ const BottomNav = ({ activeTab, setActiveTab, onOpenNewModal }) => {
     { id: 'sueldo', label: 'Motor', icon: 'zap' },
     { id: 'new', label: '', icon: 'plus', isAction: true },
     { id: 'movimientos', label: 'Diario', icon: 'creditCard' },
-    { id: 'analitica', label: 'Gráficos', icon: 'chart' }
+    { id: 'analitica', label: 'Análisis', icon: 'chart' }
   ];
 
   return (
@@ -827,14 +831,13 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
     };
   }, [data.movimientos]);
 
-  // Modificación 1: Mostrar los 8 movimientos más recientes
   const recentMovements = useMemo(() => {
     return (data.movimientos || []).slice(0, 8);
   }, [data.movimientos]);
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Tarjeta Hero: Patrimonio Total (Modificación 4: Sabadell IRPF visible pero separado del total disponible) */}
+      {/* Hero Card: Patrimonio Neto Disponible (Calibrado con Sabadell IRPF Separado) */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white p-6 sm:p-8 shadow-xl shadow-slate-900/10">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
@@ -852,7 +855,6 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
               {formatCurrency(totalPatrimonio)}
             </div>
 
-            {/* Modificación 4: Badge informativo de Sabadell IRPF */}
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-cyan-950/60 border border-cyan-500/30 text-cyan-200">
                 <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
@@ -864,7 +866,6 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             </div>
           </div>
 
-          {/* Métricas Rápidas */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-sm">
             <div className="p-2">
               <span className="text-[11px] text-slate-400 block font-medium">Ingresos Mes</span>
@@ -887,7 +888,6 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
           </div>
         </div>
 
-        {/* Acciones Rápidas */}
         <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-2">
           <button
             onClick={() => onOpenNewModal('gasto')}
@@ -924,7 +924,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-bold text-slate-900">Tus Cuentas & Saldos</h2>
-          <span className="text-xs text-slate-500">Toca una cuenta para ver sus movimientos</span>
+          <span className="text-xs text-slate-500">Toca una cuenta para filtrar diario</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -978,12 +978,12 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
         </div>
       </div>
 
-      {/* Feed de Movimientos Recientes (Modificación 1: Más recientes arriba) */}
+      {/* Feed de Movimientos Recientes */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900">Movimientos Recientes</h3>
-            <p className="text-xs text-slate-500">Últimas transacciones registradas (ordenadas por fecha reciente)</p>
+            <p className="text-xs text-slate-500">Últimas transacciones registradas</p>
           </div>
           <button
             onClick={() => setActiveTab('movimientos')}
@@ -1063,14 +1063,21 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO & GASTOS FIJOS (Modificación 2)
+// ⚡ MOTOR DE SUELDO & GASTOS FIJOS (Modificación 1)
 // ==========================================
 const SueldoEngineView = ({ setActiveTab }) => {
-  const { data, distribuirSueldo, addMovimiento } = useFinance();
+  const {
+    data,
+    distribuirSueldo,
+    addMovimiento,
+    addFuenteIngreso,
+    updateFuenteIngreso,
+    deleteFuenteIngreso
+  } = useFinance();
 
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   
-  // Modificación 2: Pre-establecer importes por defecto según configuración
+  // Sincronizar importes de ingresos
   const [incomes, setIncomes] = useState(() => {
     const init = {};
     (data.fuentesIngreso || []).forEach(f => {
@@ -1078,6 +1085,19 @@ const SueldoEngineView = ({ setActiveTab }) => {
     });
     return init;
   });
+
+  // Mantener actualizado si cambian las fuentes
+  useEffect(() => {
+    setIncomes(prev => {
+      const next = { ...prev };
+      (data.fuentesIngreso || []).forEach(f => {
+        if (next[f.id] === undefined) {
+          next[f.id] = f.importeDefecto !== undefined && f.importeDefecto > 0 ? f.importeDefecto.toString() : '';
+        }
+      });
+      return next;
+    });
+  }, [data.fuentesIngreso]);
 
   const [irpfPct, setIrpfPct] = useState(data.config?.repartoSueldo?.irpf || 0.18);
   const [ahorroPct, setAhorroPct] = useState(data.config?.repartoSueldo?.ahorro || 0.50);
@@ -1087,6 +1107,14 @@ const SueldoEngineView = ({ setActiveTab }) => {
 
   const [distributionResult, setDistributionResult] = useState(null);
   const [confirmedFixedMsg, setConfirmedFixedMsg] = useState('');
+
+  // Modificación 1: Modal para Gestionar Trabajos / Fuentes de Ingreso
+  const [isManageSourcesOpen, setIsManageSourcesOpen] = useState(false);
+  const [newSourceName, setNewSourceName] = useState('');
+  const [newSourceDefaultAmt, setNewSourceDefaultAmt] = useState('');
+  const [editingSourceId, setEditingSourceId] = useState(null);
+  const [editSourceName, setEditSourceName] = useState('');
+  const [editSourceAmt, setEditSourceAmt] = useState('');
 
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
@@ -1131,7 +1159,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
     }
   };
 
-  // Modificación 2: Confirmar un gasto fijo de forma ágil bajo demanda
   const handleQuickRegisterFixedExpense = (gastoFijo) => {
     addMovimiento({
       fecha: fecha,
@@ -1145,6 +1172,26 @@ const SueldoEngineView = ({ setActiveTab }) => {
     setTimeout(() => setConfirmedFixedMsg(''), 4000);
   };
 
+  const handleAddNewSource = (e) => {
+    e.preventDefault();
+    if (!newSourceName.trim()) return;
+    addFuenteIngreso({
+      nombre: newSourceName,
+      importeDefecto: parseFloat(newSourceDefaultAmt) || 0
+    });
+    setNewSourceName('');
+    setNewSourceDefaultAmt('');
+  };
+
+  const handleSaveEditSource = (id) => {
+    if (!editSourceName.trim()) return;
+    updateFuenteIngreso(id, {
+      nombre: editSourceName.trim(),
+      importeDefecto: parseFloat(editSourceAmt) || 0
+    });
+    setEditingSourceId(null);
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-24 md:pb-8">
       {/* Cabecera */}
@@ -1156,12 +1203,12 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas y Gastos Recurrentes</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Los importes están preestablecidos con tus valores habituales. Modifícalos y actívalos el día que recibas el cobro.
+            Configura tus trabajos, modifica sus importes y actívalos el día que recibas el cobro.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Fecha de aplicación:</span>
+          <span className="text-xs text-slate-400">Fecha de cobro:</span>
           <input
             type="date"
             value={fecha}
@@ -1214,14 +1261,131 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       )}
 
-      {/* Formulario de Nóminas con valores preestablecidos */}
+      {/* Formulario de Nóminas & Gestión Dinámica (Modificación 1) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Icon name="dollar" className="w-4 h-4 text-emerald-600" />
-            1. Nóminas del Mes (Preestablecidas)
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Icon name="dollar" className="w-4 h-4 text-emerald-600" />
+              1. Nóminas a Cobrar
+            </h3>
 
+            <button
+              onClick={() => setIsManageSourcesOpen(!isManageSourcesOpen)}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5"
+            >
+              <Icon name="settings" className="w-3.5 h-3.5" />
+              {isManageSourcesOpen ? 'Cerrar Edición' : 'Editar Trabajos'}
+            </button>
+          </div>
+
+          {/* Panel de Gestión / Edición de Trabajos */}
+          {isManageSourcesOpen && (
+            <div className="p-4 bg-slate-50 rounded-2xl border border-blue-200/60 space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900">Gestionar Trabajos y Fuentes de Ingreso</span>
+                <span className="text-[11px] text-slate-400">Añade o modifica tus fuentes</span>
+              </div>
+
+              {/* Lista para editar / eliminar */}
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {(data.fuentesIngreso || []).map(fuente => {
+                  const isEditing = editingSourceId === fuente.id;
+
+                  if (isEditing) {
+                    return (
+                      <div key={fuente.id} className="flex items-center gap-2 p-2 bg-white rounded-xl border border-blue-300">
+                        <input
+                          type="text"
+                          value={editSourceName}
+                          onChange={(e) => setEditSourceName(e.target.value)}
+                          className="flex-1 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={editSourceAmt}
+                          onChange={(e) => setEditSourceAmt(e.target.value)}
+                          className="w-24 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right"
+                        />
+                        <button
+                          onClick={() => handleSaveEditSource(fuente.id)}
+                          className="text-xs bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          onClick={() => setEditingSourceId(null)}
+                          className="text-xs text-slate-400 p-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={fuente.id} className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 block">{fuente.nombre}</span>
+                        <span className="text-[10px] text-slate-400">Por defecto: {formatCurrency(fuente.importeDefecto || 0)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingSourceId(fuente.id);
+                            setEditSourceName(fuente.nombre);
+                            setEditSourceAmt((fuente.importeDefecto || 0).toString());
+                          }}
+                          className="text-slate-500 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100"
+                        >
+                          <Icon name="edit" className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Eliminar la fuente "${fuente.nombre}"?`)) {
+                              deleteFuenteIngreso(fuente.id);
+                            }
+                          }}
+                          className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100"
+                        >
+                          <Icon name="trash" className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Añadir nuevo trabajo */}
+              <form onSubmit={handleAddNewSource} className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Nombre nuevo trabajo (ej. Colegio Nuevo)"
+                  value={newSourceName}
+                  onChange={(e) => setNewSourceName(e.target.value)}
+                  className="flex-1 text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Sueldo €"
+                  value={newSourceDefaultAmt}
+                  onChange={(e) => setNewSourceDefaultAmt(e.target.value)}
+                  className="w-24 text-xs font-bold bg-white border border-slate-200 rounded-xl px-2 py-2 text-right text-slate-800"
+                />
+                <button
+                  type="submit"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl whitespace-nowrap"
+                >
+                  + Añadir
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Formulario de Importes del Mes */}
           <div className="space-y-3">
             {(data.fuentesIngreso || []).map(fuente => (
               <div key={fuente.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -1315,7 +1479,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Modificación 2: Gastos Fijos y Suscripciones bajo demanda */}
+      {/* Gastos Fijos y Suscripciones bajo demanda */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1323,7 +1487,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
             Gastos Fijos & Suscripciones (Activar cuando se cobren)
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Pulsa en "Registrar Pago" el día del mes en que te pasen el cargo bancario para aplicarlo al saldo.
+            Pulsa en "Registrar Pago" el día en que te llegue el cargo bancario para aplicarlo al saldo.
           </p>
         </div>
 
@@ -1354,7 +1518,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS & FILTROS (Modificación 1 y 3)
+// 📖 DIARIO DE MOVIMIENTOS
 // ==========================================
 const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) => {
   const { data, deleteMovimiento } = useFinance();
@@ -1367,7 +1531,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // Modificación 1 & 3: Meses disponibles en orden descendente con nombres en español
   const availableMonths = useMemo(() => {
     const months = new Set();
     (data.movimientos || []).forEach(m => {
@@ -1378,7 +1541,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
 
-  // Filtrado reactivo (más recientes arriba)
   const filteredMovimientos = useMemo(() => {
     return (data.movimientos || []).filter(m => {
       if (!m) return false;
@@ -1430,7 +1592,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
 
   return (
     <div className="space-y-5 pb-24 md:pb-8">
-      {/* Barra de Filtros y Búsqueda */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
@@ -1445,7 +1606,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {/* Modificación 3: Mes formateado en español */}
             <select
               value={selectedMonth}
               onChange={(e) => { setSelectedMonth(e.target.value); setCurrentPage(1); }}
@@ -1496,7 +1656,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
         </div>
       </div>
 
-      {/* Lista de Movimientos */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="divide-y divide-slate-100">
           {paginatedMovimientos.length === 0 ? (
@@ -1612,13 +1771,89 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
 };
 
 // ==========================================
-// 📈 ANALÍTICA & GRÁFICOS (Modificación 3: Meses en español)
+// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR (Modificación 3)
 // ==========================================
 const AnaliticaView = () => {
-  const { data } = useFinance();
-  const [timeRange, setTimeRange] = useState('2026');
+  const { data, saldos, totalPatrimonio } = useFinance();
 
-  const monthlyData = useMemo(() => {
+  const [periodoFilter, setPeriodoFilter] = useState('2026'); // '2026', 'mes', '6m', '3m', 'all'
+  const [selectedSpecificMonth, setSelectedSpecificMonth] = useState('2026-08');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.length >= 7) {
+        months.add(m.fecha.substring(0, 7));
+      }
+    });
+    return Array.from(months).sort().reverse();
+  }, [data.movimientos]);
+
+  // Movimientos filtrados para el análisis
+  const analysisMovements = useMemo(() => {
+    return (data.movimientos || []).filter(m => {
+      if (!m || !m.fecha) return false;
+      const mMonth = m.fecha.substring(0, 7);
+
+      if (periodoFilter === '2026' && !m.fecha.startsWith('2026')) return false;
+      if (periodoFilter === 'mes' && mMonth !== selectedSpecificMonth) return false;
+      if (periodoFilter === '3m' && !availableMonths.slice(0, 3).includes(mMonth)) return false;
+      if (periodoFilter === '6m' && !availableMonths.slice(0, 6).includes(mMonth)) return false;
+
+      if (selectedCategoryFilter !== 'todas' && m.categoria !== selectedCategoryFilter) return false;
+
+      return true;
+    });
+  }, [data.movimientos, periodoFilter, selectedSpecificMonth, selectedCategoryFilter, availableMonths]);
+
+  // Métricas Clave Consolidadas
+  const periodKpis = useMemo(() => {
+    let ingresos = 0;
+    let gastos = 0;
+    let transferencias = 0;
+
+    analysisMovements.forEach(m => {
+      const imp = parseFloat(m.importe) || 0;
+      if (m.tipo === 'ingreso') ingresos += imp;
+      if (m.tipo === 'gasto') gastos += imp;
+      if (m.tipo === 'transferencia') transferencias += imp;
+    });
+
+    const balance = ingresos - gastos;
+    const tasaAhorro = ingresos > 0 ? Math.max(0, Math.round((balance / ingresos) * 100)) : 0;
+    const diasEnPeriodo = periodoFilter === 'mes' ? 30 : (periodoFilter === '2026' ? 240 : 90);
+    const mediaGastoDiario = gastos / Math.max(1, diasEnPeriodo);
+
+    return { ingresos, gastos, transferencias, balance, tasaAhorro, mediaGastoDiario };
+  }, [analysisMovements, periodoFilter]);
+
+  // Desglose por Categorías
+  const categoryExpenses = useMemo(() => {
+    const map = {};
+    let totalGasto = 0;
+
+    analysisMovements.forEach(m => {
+      if (m && m.tipo === 'gasto') {
+        const cat = m.categoria || 'Otros Gastos';
+        const imp = parseFloat(m.importe) || 0;
+        map[cat] = (map[cat] || 0) + imp;
+        totalGasto += imp;
+      }
+    });
+
+    return Object.entries(map)
+      .map(([categoria, importe]) => ({
+        categoria,
+        importe,
+        porcentaje: totalGasto > 0 ? Math.round((importe / totalGasto) * 100) : 0
+      }))
+      .sort((a, b) => b.importe - a.importe);
+  }, [analysisMovements]);
+
+  // Comparativa Mensual de Ingresos vs Gastos vs Ahorro
+  const monthlyComparison = useMemo(() => {
     const map = {};
 
     (data.movimientos || []).forEach(m => {
@@ -1634,34 +1869,14 @@ const AnaliticaView = () => {
     });
 
     const sorted = Object.values(map).sort((a, b) => a.mes.localeCompare(b.mes));
-    if (timeRange === '3m') return sorted.slice(-3);
-    if (timeRange === '6m') return sorted.slice(-6);
-    if (timeRange === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
+    if (periodoFilter === '3m') return sorted.slice(-3);
+    if (periodoFilter === '6m') return sorted.slice(-6);
+    if (periodoFilter === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
+    if (periodoFilter === 'mes') return sorted.filter(m => m.mes === selectedSpecificMonth);
     return sorted;
-  }, [data.movimientos, timeRange]);
+  }, [data.movimientos, periodoFilter, selectedSpecificMonth]);
 
-  const categoryExpenses = useMemo(() => {
-    const map = {};
-    let totalGasto = 0;
-
-    (data.movimientos || []).forEach(m => {
-      if (m && m.tipo === 'gasto') {
-        const cat = m.categoria || 'Otros';
-        const imp = parseFloat(m.importe) || 0;
-        map[cat] = (map[cat] || 0) + imp;
-        totalGasto += imp;
-      }
-    });
-
-    return Object.entries(map)
-      .map(([categoria, importe]) => ({
-        categoria,
-        importe,
-        porcentaje: totalGasto > 0 ? Math.round((importe / totalGasto) * 100) : 0
-      }))
-      .sort((a, b) => b.importe - a.importe);
-  }, [data.movimientos]);
-
+  // Evolución del Patrimonio Neto Disponible
   const patrimonioEvolution = useMemo(() => {
     const initialSum = (data.cuentas || [])
       .filter(c => c && c.incluirEnTotal !== false)
@@ -1681,14 +1896,14 @@ const AnaliticaView = () => {
       history.push({ mes: mKey, total: runningTotal });
     });
 
-    if (timeRange === '3m') return history.slice(-3);
-    if (timeRange === '6m') return history.slice(-6);
-    if (timeRange === '2026') return history.filter(h => h.mes.startsWith('2026'));
+    if (periodoFilter === '3m') return history.slice(-3);
+    if (periodoFilter === '6m') return history.slice(-6);
+    if (periodoFilter === '2026') return history.filter(h => h.mes.startsWith('2026'));
     return history;
-  }, [data.cuentas, data.movimientos, timeRange]);
+  }, [data.cuentas, data.movimientos, periodoFilter]);
 
   const lineChartData = useMemo(() => {
-    if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], maxVal: 0, minVal: 0, width: 600, height: 220 };
+    if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], width: 600, height: 220 };
 
     const values = patrimonioEvolution.map(d => d.total);
     const minVal = Math.min(...values, 0);
@@ -1708,42 +1923,227 @@ const AnaliticaView = () => {
     const path = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
     const area = points.length > 0 ? `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z` : '';
 
-    return { path, area, points, maxVal, minVal, width, height };
+    return { path, area, points, width, height };
   }, [patrimonioEvolution]);
 
   const maxMonthExpense = useMemo(() => {
-    return Math.max(...monthlyData.map(m => Math.max(m.ingresos, m.gastos)), 1000);
-  }, [monthlyData]);
+    return Math.max(...monthlyComparison.map(m => Math.max(m.ingresos, m.gastos)), 1000);
+  }, [monthlyComparison]);
+
+  // Exportador de Excel que replica la plantilla original
+  const handleExportReplicatedExcel = () => {
+    const targetMonth = periodoFilter === 'mes' ? selectedSpecificMonth : '2026-08';
+    const monthName = formatMonthName(targetMonth);
+    const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(targetMonth));
+
+    // Construcción en formato XML / HTML compatible 100% con Microsoft Excel (.xls)
+    let excelHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${monthName}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+        <style>
+          th { background-color: #1e293b; color: #ffffff; font-weight: bold; font-family: Calibri, sans-serif; text-align: center; }
+          td { font-family: Calibri, sans-serif; font-size: 11pt; }
+          .header-main { background-color: #0f172a; color: #f8fafc; font-size: 14pt; font-weight: bold; text-align: center; }
+          .num { text-align: right; }
+          .bold { font-weight: bold; }
+          .ingreso { color: #059669; font-weight: bold; }
+          .gasto { color: #dc2626; }
+        </style>
+      </head>
+      <body>
+        <table border="1">
+          <tr><td colspan="6" class="header-main">FINANZAS 2026 - HOJA MENSUAL: ${monthName.toUpperCase()}</td></tr>
+          <tr><td colspan="6"></td></tr>
+          <tr>
+            <th>CUENTA</th>
+            <th>SALDO INICIAL</th>
+            <th>MOVIMIENTOS</th>
+            <th>SALDO FINAL</th>
+            <th colspan="2">CONFIGURACION</th>
+          </tr>
+    `;
+
+    (data.cuentas || []).forEach(c => {
+      const saldoIni = c.saldoInicial || 0;
+      const saldoAct = saldos[c.id] || 0;
+      const movNeto = saldoAct - saldoIni;
+      excelHtml += `
+        <tr>
+          <td class="bold">${c.nombre}</td>
+          <td class="num">${saldoIni.toFixed(2)} €</td>
+          <td class="num">${movNeto.toFixed(2)} €</td>
+          <td class="num bold">${saldoAct.toFixed(2)} €</td>
+          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : 'Sabadell IRPF (Separado)'}</td>
+        </tr>
+      `;
+    });
+
+    excelHtml += `
+          <tr><td colspan="6"></td></tr>
+          <tr><td colspan="6" class="header-main">DIARIO DE MOVIMIENTOS DEL MES (${monthMovs.length} transacciones)</td></tr>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Cuenta</th>
+            <th>Categoría</th>
+            <th>Monto (€)</th>
+            <th>Comentario</th>
+          </tr>
+    `;
+
+    monthMovs.forEach(m => {
+      const orig = (data.cuentas || []).find(c => c.id === m.cuentaOrigen)?.nombre || '';
+      const dest = (data.cuentas || []).find(c => c.id === m.cuentaDestino)?.nombre || '';
+      const cuentaStr = m.tipo === 'transferencia' ? `${orig} -> ${dest}` : (m.tipo === 'gasto' ? orig : dest);
+      const montoSign = m.tipo === 'gasto' ? -m.importe : m.importe;
+
+      excelHtml += `
+        <tr>
+          <td>${formatDate(m.fecha)}</td>
+          <td class="bold">${m.tipo.toUpperCase()}</td>
+          <td>${cuentaStr}</td>
+          <td>${m.categoria || ''}</td>
+          <td class="num ${m.tipo === 'ingreso' ? 'ingreso' : (m.tipo === 'gasto' ? 'gasto' : '')}">${montoSign.toFixed(2)} €</td>
+          <td>${m.comentario || ''}</td>
+        </tr>
+      `;
+    });
+
+    excelHtml += `</table></body></html>`;
+
+    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Finanzas_${monthName.replace(' ', '_')}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Barra de Control y Acciones Destacadas */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900">Analítica & Evolución</h2>
-          <p className="text-xs text-slate-500">Métricas consolidadas de tu patrimonio y hábitos de gasto</p>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 mb-1">
+            <Icon name="sparkles" className="w-3.5 h-3.5 text-blue-600" />
+            Motor de Inteligencia & Análisis Financiero
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Analítica Financiera Avanzada</h2>
+          <p className="text-xs text-slate-500">Métricas completas, evolución de patrimonio y reportes ejecutivos</p>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botón Presentación / Informe Ejecutivo */}
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
+          >
+            <Icon name="presentation" className="w-4 h-4" />
+            Informe Ejecutivo
+          </button>
+
+          {/* Botón Descargar Plantilla Excel Replicada */}
+          <button
+            onClick={handleExportReplicatedExcel}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
+          >
+            <Icon name="table" className="w-4 h-4" />
+            Descargar Excel Replicado
+          </button>
+        </div>
+      </div>
+
+      {/* Barra de Filtros Multidimensional */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-700">Período:</span>
           {[
             { id: '2026', label: 'Año 2026' },
-            { id: '6m', label: 'Últimos 6m' },
+            { id: 'mes', label: 'Mes Específico' },
             { id: '3m', label: 'Últimos 3m' },
-            { id: 'all', label: 'Todo' }
+            { id: '6m', label: 'Últimos 6m' },
+            { id: 'all', label: 'Todo el Histórico' }
           ].map(btn => (
             <button
               key={btn.id}
-              onClick={() => setTimeRange(btn.id)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                timeRange === btn.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+              onClick={() => setPeriodoFilter(btn.id)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                periodoFilter === btn.id
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {btn.label}
             </button>
           ))}
+
+          {periodoFilter === 'mes' && (
+            <select
+              value={selectedSpecificMonth}
+              onChange={(e) => setSelectedSpecificMonth(e.target.value)}
+              className="text-xs font-bold bg-blue-50 border border-blue-300 text-blue-900 rounded-xl px-3 py-1.5 animate-fadeIn"
+            >
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonthName(m)}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-700">Categoría:</span>
+          <select
+            value={selectedCategoryFilter}
+            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
+          >
+            <option value="todas">Todas las categorías</option>
+            {(data.categorias || []).map(cat => (
+              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Gráfico 1: Evolución del Patrimonio */}
+      {/* KPI Cards del Período */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <span className="text-xs font-medium text-slate-400">Ingresos Totales</span>
+          <div className="text-2xl font-extrabold text-emerald-600 font-sans">
+            +{formatCurrency(periodKpis.ingresos)}
+          </div>
+          <span className="text-[11px] text-slate-500 block">Nóminas y otros cobros</span>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <span className="text-xs font-medium text-slate-400">Gastos Totales</span>
+          <div className="text-2xl font-extrabold text-rose-600 font-sans">
+            -{formatCurrency(periodKpis.gastos)}
+          </div>
+          <span className="text-[11px] text-slate-500 block">Media: {formatCurrency(periodKpis.mediaGastoDiario)} / día</span>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <span className="text-xs font-medium text-slate-400">Ahorro Neto</span>
+          <div className={`text-2xl font-extrabold font-sans ${periodKpis.balance >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+            {formatCurrency(periodKpis.balance)}
+          </div>
+          <span className="text-[11px] text-slate-500 block">Balance del período</span>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <span className="text-xs font-medium text-slate-400">Tasa de Ahorro</span>
+          <div className="text-2xl font-extrabold text-sky-600 font-sans">
+            {periodKpis.tasaAhorro}%
+          </div>
+          <span className="text-[11px] text-slate-500 block">Porcentaje de ingresos guardado</span>
+        </div>
+      </div>
+
+      {/* Gráfico 1: Evolución del Patrimonio Neto Disponible */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -1751,7 +2151,7 @@ const AnaliticaView = () => {
               <Icon name="trendingUp" className="w-4 h-4 text-blue-600" />
               Evolución del Patrimonio Neto Disponible (€)
             </h3>
-            <p className="text-xs text-slate-500">Curva de crecimiento patrimonial sin IRPF</p>
+            <p className="text-xs text-slate-500">Crecimiento real de cuentas operativas e inversión (sin IRPF)</p>
           </div>
           {lineChartData.points.length > 0 && (
             <span className="text-sm font-bold text-slate-900 font-sans">
@@ -1763,7 +2163,7 @@ const AnaliticaView = () => {
         <div className="w-full overflow-x-auto">
           <svg viewBox={`0 0 ${lineChartData.width || 600} ${lineChartData.height || 220}`} className="w-full h-52">
             <defs>
-              <linearGradient id="patrimonioGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="patrimonioGrad2" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
                 <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
               </linearGradient>
@@ -1773,7 +2173,7 @@ const AnaliticaView = () => {
             <line x1="30" y1="110" x2="570" y2="110" stroke="#f1f5f9" strokeWidth="1" />
             <line x1="30" y1="190" x2="570" y2="190" stroke="#e2e8f0" strokeWidth="1" />
 
-            {lineChartData.area && <path d={lineChartData.area} fill="url(#patrimonioGrad)" />}
+            {lineChartData.area && <path d={lineChartData.area} fill="url(#patrimonioGrad2)" />}
             {lineChartData.path && <path d={lineChartData.path} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />}
 
             {lineChartData.points.map((p, i) => (
@@ -1789,15 +2189,15 @@ const AnaliticaView = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 2: Ingresos vs Gastos con nombres en español */}
+        {/* Gráfico 2: Comparativa de Ingresos vs Gastos con Nombres de Meses en Español */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Icon name="chart" className="w-4 h-4 text-emerald-600" />
-            Ingresos vs Gastos por Mes
+            Comparativa Mensual (Ingresos vs Gastos)
           </h3>
 
           <div className="space-y-3 pt-2">
-            {monthlyData.map(m => {
+            {monthlyComparison.map(m => {
               const ingPct = Math.round((m.ingresos / maxMonthExpense) * 100);
               const gastPct = Math.round((m.gastos / maxMonthExpense) * 100);
 
@@ -1819,7 +2219,7 @@ const AnaliticaView = () => {
           </div>
         </div>
 
-        {/* Gráfico 3: Gastos por Categoría */}
+        {/* Gráfico 3: Distribución por Categorías */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Icon name="pieChart" className="w-4 h-4 text-amber-600" />
@@ -1844,12 +2244,106 @@ const AnaliticaView = () => {
           </div>
         </div>
       </div>
+
+      {/* MODAL / VISTA DE INFORME EJECUTIVO & PRESENTACIÓN (Modificación 3) */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white">
+                  <Icon name="presentation" className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Informe Financiero Ejecutivo</h3>
+                  <p className="text-xs text-slate-300">
+                    Período: {periodoFilter === 'mes' ? formatMonthName(selectedSpecificMonth) : 'Año 2026'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <Icon name="x" className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Resumen Narrativo */}
+              <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
+                <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                  <Icon name="sparkles" className="w-4 h-4 text-blue-600" />
+                  Conclusión del Período
+                </span>
+                <p className="text-xs text-blue-950 leading-relaxed">
+                  Durante el período seleccionado has ingresado un total de <strong>{formatCurrency(periodKpis.ingresos)}</strong> y realizado gastos por <strong>{formatCurrency(periodKpis.gastos)}</strong>, lo que representa una tasa de ahorro del <strong>{periodKpis.tasaAhorro}%</strong> ({formatCurrency(periodKpis.balance)} guardados). Tu patrimonio neto disponible se sitúa en <strong>{formatCurrency(totalPatrimonio)}</strong>.
+                </p>
+              </div>
+
+              {/* Métricas Destacadas */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-[11px] text-slate-400 block font-medium">Ingreso Promedio</span>
+                  <span className="text-sm font-bold text-emerald-600 font-sans">
+                    {formatCurrency(periodKpis.ingresos)}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-[11px] text-slate-400 block font-medium">Gasto Diario</span>
+                  <span className="text-sm font-bold text-rose-600 font-sans">
+                    {formatCurrency(periodKpis.mediaGastoDiario)}/día
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-[11px] text-slate-400 block font-medium">Categoría Principal</span>
+                  <span className="text-sm font-bold text-slate-900 truncate block">
+                    {categoryExpenses[0]?.categoria || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Top 5 Categorías de Mayor Gasto */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 mb-2.5">Top Categorías de Gasto</h4>
+                <div className="space-y-2">
+                  {categoryExpenses.slice(0, 5).map((c, i) => (
+                    <div key={c.categoria} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
+                      <span className="font-bold text-slate-800">{i + 1}. {c.categoria}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-400">{c.porcentaje}% del total</span>
+                        <span className="font-bold text-slate-900 font-sans">{formatCurrency(c.importe)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <button
+                onClick={handleExportReplicatedExcel}
+                className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900"
+              >
+                <Icon name="download" className="w-4 h-4" />
+                Descargar Plantilla Excel
+              </button>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="bg-slate-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // ==========================================
-// ⚙️ AJUSTES & GESTIÓN DE CUENTAS (Modificación 4)
+// ⚙️ AJUSTES & GESTIÓN
 // ==========================================
 const AjustesView = () => {
   const {
@@ -1986,7 +2480,7 @@ const AjustesView = () => {
         </form>
       </div>
 
-      {/* Configuración de Cuentas: Visibilidad y Computo en Total (Modificación 4) */}
+      {/* Gestión de Cuentas */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <div>
           <h3 className="text-sm font-bold text-slate-900">Gestión de Cuentas & Cómputo de Total</h3>
@@ -2352,7 +2846,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
 };
 
 // ==========================================
-// 🚀 APP ROOT COMPONENT
+// 🚀 APP ROOT
 // ==========================================
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -2435,7 +2929,6 @@ const App = () => {
   );
 };
 
-// Render en el DOM
 const rootEl = document.getElementById('root');
 if (rootEl) {
   const root = ReactDOM.createRoot(rootEl);
