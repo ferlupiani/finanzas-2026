@@ -5,8 +5,64 @@ const {
   useCallback,
   useRef,
   createContext,
-  useContext
+  useContext,
+  Component
 } = React;
+
+// ==========================================
+// 🛡️ ERROR BOUNDARY (Evita pantallas blancas)
+// ==========================================
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      error
+    };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+  handleReset = () => {
+    try {
+      localStorage.removeItem('finanzas_data_v1');
+    } catch (e) {}
+    window.location.reload();
+  };
+  render() {
+    if (this.state.hasError) {
+      return /*#__PURE__*/React.createElement("div", {
+        className: "min-h-screen bg-slate-50 flex items-center justify-center p-6 text-slate-900 font-sans"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80 max-w-md w-full text-center space-y-4"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto"
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "x",
+        className: "w-8 h-8"
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-lg font-bold text-slate-900"
+      }, "Se ha producido un error"), /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-slate-500"
+      }, this.state.error?.message || 'Error al procesar los datos de la aplicación.'), /*#__PURE__*/React.createElement("div", {
+        className: "pt-2 flex flex-col gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => window.location.reload(),
+        className: "w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+      }, "Recargar Aplicación"), /*#__PURE__*/React.createElement("button", {
+        onClick: this.handleReset,
+        className: "w-full py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all"
+      }, "Restablecer Datos Locales"))));
+    }
+    return this.props.children;
+  }
+}
 
 // ==========================================
 // 🎨 ICONOS SVG MINIMALISTAS (100% Offline & Native)
@@ -207,8 +263,8 @@ const formatDate = dateStr => {
     return dateStr;
   }
 };
-const getAccountBadge = (accId, cuentas) => {
-  const acc = cuentas.find(c => c.id === accId);
+const getAccountBadge = (accId, cuentas = []) => {
+  const acc = (cuentas || []).find(c => c && c.id === accId);
   if (!acc) return {
     nombre: 'Desconocida',
     color: '#64748b',
@@ -254,7 +310,7 @@ const getAccountBadge = (accId, cuentas) => {
 };
 
 // ==========================================
-// 🌐 CONTEXTO GLOBAL & SINCRONIZACIÓN FIREBASE
+// 🌐 CONTEXTO GLOBAL & NORMALIZACIÓN DE DATOS
 // ==========================================
 const FinanceContext = createContext(null);
 const STORAGE_KEY = 'finanzas_data_v1';
@@ -366,7 +422,7 @@ const defaultFallbackData = {
     color: '#10b981'
   }, {
     id: 'cat-universidad',
-    'nombre': 'Universidad',
+    nombre: 'Universidad',
     tipo: 'gasto',
     color: '#3b82f6'
   }, {
@@ -440,6 +496,41 @@ const defaultFallbackData = {
   }],
   movimientos: []
 };
+
+// Función robusta para normalizar cualquier objeto (de Firebase o LocalStorage) a arrays válidos
+const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
+  if (!input || typeof input !== 'object') return fallback;
+  const toCleanArray = (val, def = []) => {
+    if (Array.isArray(val)) return val.filter(Boolean);
+    if (val && typeof val === 'object') return Object.values(val).filter(Boolean);
+    return def;
+  };
+  const cuentas = toCleanArray(input.cuentas, fallback.cuentas);
+  const categorias = toCleanArray(input.categorias, fallback.categorias);
+  const fuentesIngreso = toCleanArray(input.fuentesIngreso, fallback.fuentesIngreso);
+  let movimientos = toCleanArray(input.movimientos, []);
+
+  // Si movimientos viene vacío de Firebase pero el fallback tenía movimientos, conservarlos
+  if (movimientos.length === 0 && fallback.movimientos && fallback.movimientos.length > 0) {
+    movimientos = fallback.movimientos;
+  }
+  return {
+    version: input.version || '1.0',
+    clientUpdated: input.clientUpdated || new Date().toISOString(),
+    config: {
+      repartoSueldo: {
+        irpf: input.config?.repartoSueldo?.irpf !== undefined ? input.config.repartoSueldo.irpf : fallback.config.repartoSueldo.irpf,
+        ahorro: input.config?.repartoSueldo?.ahorro !== undefined ? input.config.repartoSueldo.ahorro : fallback.config.repartoSueldo.ahorro,
+        gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
+      },
+      inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija
+    },
+    cuentas: cuentas.length > 0 ? cuentas : fallback.cuentas,
+    categorias: categorias.length > 0 ? categorias : fallback.categorias,
+    fuentesIngreso: fuentesIngreso.length > 0 ? fuentesIngreso : fallback.fuentesIngreso,
+    movimientos
+  };
+};
 const FinanceProvider = ({
   children
 }) => {
@@ -448,9 +539,7 @@ const FinanceProvider = ({
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.movimientos && parsed.movimientos.length > 0) {
-          return parsed;
-        }
+        return normalizeFinanceData(parsed, defaultFallbackData);
       }
     } catch (e) {
       console.warn('Error reading from localStorage:', e);
@@ -460,35 +549,34 @@ const FinanceProvider = ({
   const [firebaseUrl, setFirebaseUrlState] = useState(() => {
     return localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
   });
-
-  // syncStatus: 'synced' | 'syncing' | 'offline' | 'error'
   const [syncStatus, setSyncStatus] = useState('offline');
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const isSyncingRef = useRef(false);
 
-  // Carga inicial desde data.json si el localStorage está vacío o incompleto
+  // Carga inicial desde data.json si el estado local no tiene movimientos
   useEffect(() => {
     const loadInitialDataFile = async () => {
       try {
         const res = await fetch('data.json');
         if (res.ok) {
           const jsonFile = await res.json();
+          const cleanJson = normalizeFinanceData(jsonFile, defaultFallbackData);
           setData(current => {
-            if (!current.movimientos || current.movimientos.length === 0 || jsonFile.clientUpdated > current.clientUpdated) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonFile));
-              return jsonFile;
+            if (!current.movimientos || current.movimientos.length === 0 || cleanJson.clientUpdated > current.clientUpdated) {
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanJson));
+              } catch (e) {}
+              return cleanJson;
             }
             return current;
           });
         }
       } catch (err) {
-        console.log('No external data.json found, using local storage.');
+        console.log('No external data.json found or fetch failed');
       }
     };
     loadInitialDataFile();
   }, []);
-
-  // Actualizar Firebase URL
   const setFirebaseUrl = url => {
     setFirebaseUrlState(url);
     if (url) {
@@ -497,17 +585,15 @@ const FinanceProvider = ({
       localStorage.removeItem(FIREBASE_URL_KEY);
     }
   };
-
-  // Función para guardar cambios locales y sincronizar inmediatamente con Firebase
   const updateAndSyncData = useCallback(async updater => {
     setData(prev => {
-      const nextData = typeof updater === 'function' ? updater(prev) : updater;
-      const updatedData = {
-        ...nextData,
+      const rawNext = typeof updater === 'function' ? updater(prev) : updater;
+      const normalized = normalizeFinanceData({
+        ...rawNext,
         clientUpdated: new Date().toISOString()
-      };
+      }, prev);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       } catch (e) {
         console.error('LocalStorage write error:', e);
       }
@@ -520,7 +606,7 @@ const FinanceProvider = ({
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(updatedData)
+          body: JSON.stringify(normalized)
         }).then(res => {
           if (res.ok) {
             setSyncStatus('synced');
@@ -532,7 +618,7 @@ const FinanceProvider = ({
       } else {
         setSyncStatus('offline');
       }
-      return updatedData;
+      return normalized;
     });
   }, [firebaseUrl]);
 
@@ -544,19 +630,15 @@ const FinanceProvider = ({
     try {
       const res = await fetch(firebaseUrl);
       if (!res.ok) throw new Error('Firebase HTTP error');
-      const cloudData = await res.json();
-      if (cloudData && cloudData.version) {
+      const rawCloud = await res.json();
+      if (rawCloud && rawCloud.version) {
         setData(local => {
+          const cloudData = normalizeFinanceData(rawCloud, local);
           const localTime = new Date(local.clientUpdated || 0).getTime();
           const cloudTime = new Date(cloudData.clientUpdated || 0).getTime();
-          if (cloudTime > localTime) {
-            // Nube es más reciente -> actualizar local
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
-            setLastSyncTime(new Date());
-            setSyncStatus('synced');
-            return cloudData;
-          } else if (localTime > cloudTime) {
-            // Local es más reciente -> subir a la nube
+
+          // Si en la nube hay menos movimientos que en local, actualizar la nube con los locales
+          if (local.movimientos.length > cloudData.movimientos.length) {
             fetch(firebaseUrl, {
               method: 'PUT',
               headers: {
@@ -568,9 +650,25 @@ const FinanceProvider = ({
               setSyncStatus('synced');
             });
             return local;
-          } else {
+          }
+          if (cloudTime >= localTime) {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+            } catch (e) {}
             setLastSyncTime(new Date());
             setSyncStatus('synced');
+            return cloudData;
+          } else {
+            fetch(firebaseUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(local)
+            }).then(() => {
+              setLastSyncTime(new Date());
+              setSyncStatus('synced');
+            });
             return local;
           }
         });
@@ -594,7 +692,7 @@ const FinanceProvider = ({
     }
   }, [firebaseUrl, data]);
 
-  // Sincronización reactiva 24/7 (polling cada 30s + focus + online)
+  // Sincronización reactiva 24/7
   useEffect(() => {
     syncWithCloud();
     const interval = setInterval(syncWithCloud, 30000);
@@ -615,7 +713,6 @@ const FinanceProvider = ({
       id: mov.id || `mov-${Date.now()}`,
       fecha: mov.fecha || new Date().toISOString().split('T')[0],
       tipo: mov.tipo,
-      // 'gasto' | 'ingreso' | 'transferencia'
       cuentaOrigen: mov.cuentaOrigen || '',
       cuentaDestino: mov.cuentaDestino || '',
       importe: Math.abs(parseFloat(mov.importe) || 0),
@@ -624,13 +721,13 @@ const FinanceProvider = ({
     };
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: [newMov, ...prev.movimientos]
+      movimientos: [newMov, ...(prev.movimientos || [])]
     }));
   };
   const updateMovimiento = (id, updatedFields) => {
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: prev.movimientos.map(m => m.id === id ? {
+      movimientos: (prev.movimientos || []).map(m => m.id === id ? {
         ...m,
         ...updatedFields
       } : m)
@@ -639,7 +736,7 @@ const FinanceProvider = ({
   const deleteMovimiento = id => {
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: prev.movimientos.filter(m => m.id !== id)
+      movimientos: (prev.movimientos || []).filter(m => m.id !== id)
     }));
   };
 
@@ -661,11 +758,11 @@ const FinanceProvider = ({
     const newMovs = [];
     const timestamp = Date.now();
 
-    // 1. Registrar los ingresos de cada nómina
+    // 1. Registrar ingresos por fuente
     Object.entries(incomes).forEach(([fuenteId, amount], idx) => {
       const numAmt = parseFloat(amount) || 0;
       if (numAmt > 0) {
-        const fuenteObj = data.fuentesIngreso.find(f => f.id === fuenteId);
+        const fuenteObj = (data.fuentesIngreso || []).find(f => f.id === fuenteId);
         const nombreFuente = fuenteObj ? fuenteObj.nombre : fuenteId;
         newMovs.push({
           id: `mov-${timestamp + idx * 10}`,
@@ -722,7 +819,7 @@ const FinanceProvider = ({
     }
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: [...newMovs, ...prev.movimientos]
+      movimientos: [...newMovs, ...(prev.movimientos || [])]
     }));
     return {
       totalIngreso,
@@ -735,7 +832,7 @@ const FinanceProvider = ({
     updateAndSyncData(prev => ({
       ...prev,
       config: {
-        ...prev.config,
+        ...(prev.config || {}),
         ...newConfig
       }
     }));
@@ -743,7 +840,7 @@ const FinanceProvider = ({
   const toggleCuenta = id => {
     updateAndSyncData(prev => ({
       ...prev,
-      cuentas: prev.cuentas.map(c => c.id === id ? {
+      cuentas: (prev.cuentas || []).map(c => c.id === id ? {
         ...c,
         activa: !c.activa
       } : c)
@@ -752,7 +849,7 @@ const FinanceProvider = ({
   const addCuenta = cuenta => {
     updateAndSyncData(prev => ({
       ...prev,
-      cuentas: [...prev.cuentas, {
+      cuentas: [...(prev.cuentas || []), {
         ...cuenta,
         id: `acc-${Date.now()}`,
         activa: true
@@ -762,15 +859,16 @@ const FinanceProvider = ({
   const addCategoria = cat => {
     updateAndSyncData(prev => ({
       ...prev,
-      categorias: [...prev.categorias, {
+      categorias: [...(prev.categorias || []), {
         ...cat,
         id: `cat-${Date.now()}`
       }]
     }));
   };
   const importJsonData = newJson => {
-    if (newJson && newJson.movimientos && Array.isArray(newJson.movimientos)) {
-      updateAndSyncData(newJson);
+    if (newJson && typeof newJson === 'object') {
+      const clean = normalizeFinanceData(newJson, data);
+      updateAndSyncData(clean);
       return true;
     }
     return false;
@@ -780,7 +878,8 @@ const FinanceProvider = ({
       const res = await fetch('data.json');
       if (res.ok) {
         const json = await res.json();
-        updateAndSyncData(json);
+        const clean = normalizeFinanceData(json, defaultFallbackData);
+        updateAndSyncData(clean);
         return true;
       }
     } catch (e) {
@@ -792,10 +891,11 @@ const FinanceProvider = ({
   // Cálculo reactivo de saldos individuales y totales
   const saldos = useMemo(() => {
     const bal = {};
-    data.cuentas.forEach(c => {
-      bal[c.id] = c.saldoInicial || 0.0;
+    (data.cuentas || []).forEach(c => {
+      if (c && c.id) bal[c.id] = c.saldoInicial || 0.0;
     });
-    data.movimientos.forEach(m => {
+    (data.movimientos || []).forEach(m => {
+      if (!m) return;
       const imp = parseFloat(m.importe) || 0;
       if (m.tipo === 'gasto') {
         if (bal[m.cuentaOrigen] !== undefined) bal[m.cuentaOrigen] -= imp;
@@ -809,7 +909,7 @@ const FinanceProvider = ({
     return bal;
   }, [data.cuentas, data.movimientos]);
   const totalPatrimonio = useMemo(() => {
-    return data.cuentas.filter(c => c.activa).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
+    return (data.cuentas || []).filter(c => c && c.activa).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
   return /*#__PURE__*/React.createElement(FinanceContext.Provider, {
     value: {
@@ -879,7 +979,8 @@ const Navbar = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-7xl mx-auto flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3"
+    className: "flex items-center gap-3 cursor-pointer",
+    onClick: () => setActiveTab('dashboard')
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-white shadow-sm shadow-slate-200"
   }, /*#__PURE__*/React.createElement(Icon, {
@@ -922,7 +1023,7 @@ const Navbar = ({
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: syncNow,
-    title: "Pulsar para forzar sincronización",
+    title: "Pulsar para forzar sincronización con Firebase",
     className: `flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${syncInfo.pill}`
   }, /*#__PURE__*/React.createElement("span", {
     className: `w-2 h-2 rounded-full ${syncInfo.color}`
@@ -1014,8 +1115,6 @@ const DashboardView = ({
     saldos,
     totalPatrimonio
   } = useFinance();
-
-  // Estadísticas del mes en curso
   const currentMonthStats = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -1023,8 +1122,8 @@ const DashboardView = ({
     const monthPrefix = `${currentYear}-${currentMonth}`;
     let ingresos = 0;
     let gastos = 0;
-    data.movimientos.forEach(m => {
-      if (m.fecha && m.fecha.startsWith(monthPrefix)) {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.startsWith(monthPrefix)) {
         const imp = parseFloat(m.importe) || 0;
         if (m.tipo === 'ingreso') ingresos += imp;
         if (m.tipo === 'gasto') gastos += imp;
@@ -1037,10 +1136,8 @@ const DashboardView = ({
       tasaAhorro: ingresos > 0 ? Math.max(0, Math.round((ingresos - gastos) / ingresos * 100)) : 0
     };
   }, [data.movimientos]);
-
-  // Últimos 8 movimientos
   const recentMovements = useMemo(() => {
-    return data.movimientos.slice(0, 8);
+    return (data.movimientos || []).slice(0, 8);
   }, [data.movimientos]);
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-6 pb-24 md:pb-8"
@@ -1056,11 +1153,11 @@ const DashboardView = ({
     className: "flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"
   }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Neto Consolidado"), /*#__PURE__*/React.createElement("span", {
     className: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200"
-  }, data.cuentas.filter(c => c.activa).length, " Cuentas Activas")), /*#__PURE__*/React.createElement("div", {
+  }, (data.cuentas || []).filter(c => c && c.activa).length, " Cuentas Activas")), /*#__PURE__*/React.createElement("div", {
     className: "text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white font-sans"
   }, formatCurrency(totalPatrimonio)), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "Calculado en tiempo real desde el histórico íntegro de ", data.movimientos.length, " movimientos")), /*#__PURE__*/React.createElement("div", {
+  }, "Calculado en tiempo real desde el histórico íntegro de ", (data.movimientos || []).length, " movimientos")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-2"
@@ -1114,7 +1211,7 @@ const DashboardView = ({
     className: "text-xs text-slate-500"
   }, "Toca para filtrar diario")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-  }, data.cuentas.filter(c => c.activa).map(c => {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => {
     const saldo = saldos[c.id] || 0;
     const badge = getAccountBadge(c.id, data.cuentas);
     const pctOfTotal = totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0;
@@ -1157,7 +1254,7 @@ const DashboardView = ({
     className: "text-sm font-bold text-slate-900"
   }, "Motor de Reparto de Sueldo Automatizado"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600"
-  }, "IRPF: ", /*#__PURE__*/React.createElement("strong", null, Math.round(data.config.repartoSueldo.irpf * 100), "%"), " (Sabadell IRPF) • Ahorro: ", /*#__PURE__*/React.createElement("strong", null, Math.round(data.config.repartoSueldo.ahorro * 100), "%"), " (Sabadell Ahorro) • Inversión fija: ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(data.config.inversionFija)), " (Trade Republic)"))), /*#__PURE__*/React.createElement("button", {
+  }, "IRPF: ", /*#__PURE__*/React.createElement("strong", null, Math.round((data.config?.repartoSueldo?.irpf || 0.18) * 100), "%"), " (Sabadell IRPF) • Ahorro: ", /*#__PURE__*/React.createElement("strong", null, Math.round((data.config?.repartoSueldo?.ahorro || 0.50) * 100), "%"), " (Sabadell Ahorro) • Inversión fija: ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(data.config?.inversionFija || 60)), " (Trade Republic)"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('sueldo'),
     className: "bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm whitespace-nowrap"
   }, "Ejecutar Reparto →")), /*#__PURE__*/React.createElement("div", {
@@ -1171,14 +1268,14 @@ const DashboardView = ({
   }, "Últimas transacciones registradas")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('movimientos'),
     className: "text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-  }, "Ver todos (", data.movimientos.length, ") →")), /*#__PURE__*/React.createElement("div", {
+  }, "Ver todos (", (data.movimientos || []).length, ") →")), /*#__PURE__*/React.createElement("div", {
     className: "divide-y divide-slate-100"
   }, recentMovements.map(m => {
     const isGasto = m.tipo === 'gasto';
     const isIngreso = m.tipo === 'ingreso';
     const isTransfer = m.tipo === 'transferencia';
-    const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
-    const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+    const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+    const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
     return /*#__PURE__*/React.createElement("div", {
       key: m.id,
       className: "p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3"
@@ -1215,25 +1312,22 @@ const SueldoEngineView = ({
 }) => {
   const {
     data,
-    distribuirSueldo,
-    updateConfig
+    distribuirSueldo
   } = useFinance();
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [incomes, setIncomes] = useState(() => {
     const init = {};
-    data.fuentesIngreso.forEach(f => {
+    (data.fuentesIngreso || []).forEach(f => {
       init[f.id] = '';
     });
     return init;
   });
-  const [irpfPct, setIrpfPct] = useState(data.config.repartoSueldo.irpf);
-  const [ahorroPct, setAhorroPct] = useState(data.config.repartoSueldo.ahorro);
-  const [gastoPct, setGastoPct] = useState(data.config.repartoSueldo.gasto);
-  const [inversionFija, setInversionFija] = useState(data.config.inversionFija);
+  const [irpfPct, setIrpfPct] = useState(data.config?.repartoSueldo?.irpf || 0.18);
+  const [ahorroPct, setAhorroPct] = useState(data.config?.repartoSueldo?.ahorro || 0.50);
+  const [gastoPct, setGastoPct] = useState(data.config?.repartoSueldo?.gasto || 0.32);
+  const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
   const [distributionResult, setDistributionResult] = useState(null);
-
-  // Cálculo en vivo
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
   }, [incomes]);
@@ -1276,9 +1370,8 @@ const SueldoEngineView = ({
         fecha,
         preview
       });
-      // Limpiar importes
       const resetIncomes = {};
-      data.fuentesIngreso.forEach(f => {
+      (data.fuentesIngreso || []).forEach(f => {
         resetIncomes[f.id] = '';
       });
       setIncomes(resetIncomes);
@@ -1355,7 +1448,7 @@ const SueldoEngineView = ({
     className: "w-4 h-4 text-emerald-600"
   }), "1. Introduce los Ingresos del Mes"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
-  }, data.fuentesIngreso.map(fuente => /*#__PURE__*/React.createElement("div", {
+  }, (data.fuentesIngreso || []).map(fuente => /*#__PURE__*/React.createElement("div", {
     key: fuente.id,
     className: "flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
   }, /*#__PURE__*/React.createElement("label", {
@@ -1380,7 +1473,7 @@ const SueldoEngineView = ({
     value: cuentaIngreso,
     onChange: e => setCuentaIngreso(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
-  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -1454,21 +1547,18 @@ const MovimientosView = ({
   const [selectedMonth, setSelectedMonth] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
-
-  // Lista de meses disponibles en el histórico
   const availableMonths = useMemo(() => {
     const months = new Set();
-    data.movimientos.forEach(m => {
-      if (m.fecha && m.fecha.length >= 7) {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.length >= 7) {
         months.add(m.fecha.substring(0, 7));
       }
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
-
-  // Filtrado reactivo
   const filteredMovimientos = useMemo(() => {
-    return data.movimientos.filter(m => {
+    return (data.movimientos || []).filter(m => {
+      if (!m) return false;
       if (selectedType !== 'todos' && m.tipo !== selectedType) return false;
       if (selectedAccount !== 'todos') {
         if (m.tipo === 'gasto' && m.cuentaOrigen !== selectedAccount) return false;
@@ -1489,8 +1579,6 @@ const MovimientosView = ({
       return true;
     });
   }, [data.movimientos, selectedType, selectedAccount, selectedCategory, selectedMonth, search]);
-
-  // Totales de la selección filtrada
   const filteredTotals = useMemo(() => {
     let gastos = 0;
     let ingresos = 0;
@@ -1505,8 +1593,6 @@ const MovimientosView = ({
       balance: ingresos - gastos
     };
   }, [filteredMovimientos]);
-
-  // Paginación
   const totalPages = Math.ceil(filteredMovimientos.length / itemsPerPage) || 1;
   const paginatedMovimientos = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -1576,7 +1662,7 @@ const MovimientosView = ({
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
   }, /*#__PURE__*/React.createElement("option", {
     value: "todos"
-  }, "Todas las cuentas"), data.cuentas.map(c => /*#__PURE__*/React.createElement("option", {
+  }, "Todas las cuentas"), (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -1603,8 +1689,8 @@ const MovimientosView = ({
     const isGasto = m.tipo === 'gasto';
     const isIngreso = m.tipo === 'ingreso';
     const isTransfer = m.tipo === 'transferencia';
-    const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
-    const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+    const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+    const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
     return /*#__PURE__*/React.createElement("div", {
       key: m.id,
       onClick: () => onEditModal(m),
@@ -1672,14 +1758,12 @@ const AnaliticaView = () => {
   const {
     data
   } = useFinance();
-  const [timeRange, setTimeRange] = useState('2026'); // '2026' | 'all' | '6m' | '3m'
-
-  // Agrupación mensual
+  const [timeRange, setTimeRange] = useState('2026');
   const monthlyData = useMemo(() => {
     const map = {};
-    data.movimientos.forEach(m => {
-      if (!m.fecha || m.fecha.length < 7) return;
-      const monthKey = m.fecha.substring(0, 7); // YYYY-MM
+    (data.movimientos || []).forEach(m => {
+      if (!m || !m.fecha || m.fecha.length < 7) return;
+      const monthKey = m.fecha.substring(0, 7);
       if (!map[monthKey]) {
         map[monthKey] = {
           mes: monthKey,
@@ -1694,20 +1778,16 @@ const AnaliticaView = () => {
       if (m.tipo === 'transferencia') map[monthKey].transferencias += imp;
     });
     const sorted = Object.values(map).sort((a, b) => a.mes.localeCompare(b.mes));
-
-    // Filtrar según rango
     if (timeRange === '3m') return sorted.slice(-3);
     if (timeRange === '6m') return sorted.slice(-6);
     if (timeRange === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
     return sorted;
   }, [data.movimientos, timeRange]);
-
-  // Gastos por categoría
   const categoryExpenses = useMemo(() => {
     const map = {};
     let totalGasto = 0;
-    data.movimientos.forEach(m => {
-      if (m.tipo === 'gasto') {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.tipo === 'gasto') {
         const cat = m.categoria || 'Otros';
         const imp = parseFloat(m.importe) || 0;
         map[cat] = (map[cat] || 0) + imp;
@@ -1720,17 +1800,13 @@ const AnaliticaView = () => {
       porcentaje: totalGasto > 0 ? Math.round(importe / totalGasto * 100) : 0
     })).sort((a, b) => b.importe - a.importe);
   }, [data.movimientos]);
-
-  // Evolución del Patrimonio Mes a Mes (Gráfico de Líneas)
   const patrimonioEvolution = useMemo(() => {
-    const initialSum = data.cuentas.reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
+    const initialSum = (data.cuentas || []).reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
     let runningTotal = initialSum;
     const history = [];
-
-    // Todos los meses ordenados
-    const allMonths = Array.from(new Set(data.movimientos.map(m => m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
+    const allMonths = Array.from(new Set((data.movimientos || []).map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
     allMonths.forEach(mKey => {
-      const monthMovs = data.movimientos.filter(m => m.fecha && m.fecha.startsWith(mKey));
+      const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(mKey));
       monthMovs.forEach(m => {
         const imp = parseFloat(m.importe) || 0;
         if (m.tipo === 'ingreso') runningTotal += imp;
@@ -1746,15 +1822,15 @@ const AnaliticaView = () => {
     if (timeRange === '2026') return history.filter(h => h.mes.startsWith('2026'));
     return history;
   }, [data.cuentas, data.movimientos, timeRange]);
-
-  // Generador de puntos SVG para el gráfico de línea
   const lineChartData = useMemo(() => {
     if (patrimonioEvolution.length === 0) return {
       path: '',
       area: '',
       points: [],
       maxVal: 0,
-      minVal: 0
+      minVal: 0,
+      width: 600,
+      height: 220
     };
     const values = patrimonioEvolution.map(d => d.total);
     const minVal = Math.min(...values, 0);
@@ -1773,7 +1849,7 @@ const AnaliticaView = () => {
       };
     });
     const path = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
-    const area = `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+    const area = points.length > 0 ? `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z` : '';
     return {
       path,
       area,
@@ -1895,16 +1971,12 @@ const AnaliticaView = () => {
     className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+  }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-slate-900 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "chart",
     className: "w-4 h-4 text-emerald-600"
-  }), "Ingresos vs Gastos por Mes"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-500"
-  }, "Comparativa mensual de flujo"))), /*#__PURE__*/React.createElement("div", {
+  }), "Ingresos vs Gastos por Mes"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 pt-2"
   }, monthlyData.map(m => {
     const ingPct = Math.round(m.ingresos / maxMonthExpense * 100);
@@ -1973,10 +2045,10 @@ const AjustesView = () => {
     resetToOriginalData
   } = useFinance();
   const [inputUrl, setInputUrl] = useState(firebaseUrl);
-  const [irpf, setIrpf] = useState(data.config.repartoSueldo.irpf * 100);
-  const [ahorro, setAhorro] = useState(data.config.repartoSueldo.ahorro * 100);
-  const [gasto, setGasto] = useState(data.config.repartoSueldo.gasto * 100);
-  const [invFija, setInvFija] = useState(data.config.inversionFija);
+  const [irpf, setIrpf] = useState((data.config?.repartoSueldo?.irpf || 0.18) * 100);
+  const [ahorro, setAhorro] = useState((data.config?.repartoSueldo?.ahorro || 0.50) * 100);
+  const [gasto, setGasto] = useState((data.config?.repartoSueldo?.gasto || 0.32) * 100);
+  const [invFija, setInvFija] = useState(data.config?.inversionFija || 60.00);
   const [statusMsg, setStatusMsg] = useState('');
   const handleSaveFirebase = e => {
     e.preventDefault();
@@ -2131,7 +2203,7 @@ const AjustesView = () => {
     className: "text-sm font-bold text-slate-900"
   }, "Visibilidad de Cuentas"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, data.cuentas.map(c => /*#__PURE__*/React.createElement("div", {
+  }, (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
     className: "flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2299,7 +2371,7 @@ const MovementModal = ({
     value: cuentaOrigen,
     onChange: e => setCuentaOrigen(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
-  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), tipo === 'ingreso' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -2308,7 +2380,7 @@ const MovementModal = ({
     value: cuentaDestino,
     onChange: e => setCuentaDestino(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
-  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), tipo === 'transferencia' && /*#__PURE__*/React.createElement("div", {
@@ -2319,7 +2391,7 @@ const MovementModal = ({
     value: cuentaOrigen,
     onChange: e => setCuentaOrigen(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
-  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -2328,7 +2400,7 @@ const MovementModal = ({
     value: cuentaDestino,
     onChange: e => setCuentaDestino(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
-  }, data.cuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), tipo !== 'transferencia' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -2337,7 +2409,7 @@ const MovementModal = ({
     value: categoria,
     onChange: e => setCategoria(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
-  }, data.categorias.filter(c => c.tipo === tipo || c.tipo === 'mixto').map(c => /*#__PURE__*/React.createElement("option", {
+  }, (data.categorias || []).filter(c => c && (c.tipo === tipo || c.tipo === 'mixto')).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.nombre
   }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -2382,7 +2454,7 @@ const App = () => {
     setAccountFilter(accId);
     setActiveTab('movimientos');
   };
-  return /*#__PURE__*/React.createElement(FinanceProvider, null, /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(FinanceProvider, null, /*#__PURE__*/React.createElement("div", {
     className: "min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white"
   }, /*#__PURE__*/React.createElement(Navbar, {
     activeTab: activeTab,
@@ -2409,7 +2481,7 @@ const App = () => {
     onClose: () => setIsModalOpen(false),
     editingMovement: editingMovement,
     defaultType: defaultModalType
-  })));
+  }))));
 };
 
 // Render en el DOM

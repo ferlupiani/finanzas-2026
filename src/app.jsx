@@ -1,4 +1,62 @@
-const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
+const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext, Component } = React;
+
+// ==========================================
+// 🛡️ ERROR BOUNDARY (Evita pantallas blancas)
+// ==========================================
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  handleReset = () => {
+    try {
+      localStorage.removeItem('finanzas_data_v1');
+    } catch (e) {}
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-slate-900 font-sans">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80 max-w-md w-full text-center space-y-4">
+            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Icon name="x" className="w-8 h-8" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Se ha producido un error</h2>
+            <p className="text-xs text-slate-500">
+              {this.state.error?.message || 'Error al procesar los datos de la aplicación.'}
+            </p>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+              >
+                Recargar Aplicación
+              </button>
+              <button
+                onClick={this.handleReset}
+                className="w-full py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all"
+              >
+                Restablecer Datos Locales
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ==========================================
 // 🎨 ICONOS SVG MINIMALISTAS (100% Offline & Native)
@@ -66,8 +124,8 @@ const formatDate = (dateStr) => {
   }
 };
 
-const getAccountBadge = (accId, cuentas) => {
-  const acc = cuentas.find(c => c.id === accId);
+const getAccountBadge = (accId, cuentas = []) => {
+  const acc = (cuentas || []).find(c => c && c.id === accId);
   if (!acc) return { nombre: 'Desconocida', color: '#64748b', bgClass: 'bg-slate-100 text-slate-700 border-slate-200' };
 
   switch (acc.id) {
@@ -89,7 +147,7 @@ const getAccountBadge = (accId, cuentas) => {
 };
 
 // ==========================================
-// 🌐 CONTEXTO GLOBAL & SINCRONIZACIÓN FIREBASE
+// 🌐 CONTEXTO GLOBAL & NORMALIZACIÓN DE DATOS
 // ==========================================
 const FinanceContext = createContext(null);
 
@@ -123,7 +181,7 @@ const defaultFallbackData = {
     { id: 'cat-regalos', nombre: 'Regalos', tipo: 'gasto', color: '#ec4899' },
     { id: 'cat-ropa', nombre: 'Ropa', tipo: 'gasto', color: '#f43f5e' },
     { id: 'cat-inversiones', nombre: 'Inversiones', tipo: 'gasto', color: '#10b981' },
-    { id: 'cat-universidad', 'nombre': 'Universidad', tipo: 'gasto', color: '#3b82f6' },
+    { id: 'cat-universidad', nombre: 'Universidad', tipo: 'gasto', color: '#3b82f6' },
     { id: 'cat-utilidad', nombre: 'Utilidad', tipo: 'gasto', color: '#64748b' },
     { id: 'cat-viajes', nombre: 'Viajes', tipo: 'gasto', color: '#14b8a6' },
     { id: 'cat-fisio', nombre: 'Fisio', tipo: 'gasto', color: '#d946ef' },
@@ -145,15 +203,51 @@ const defaultFallbackData = {
   movimientos: []
 };
 
+// Función robusta para normalizar cualquier objeto (de Firebase o LocalStorage) a arrays válidos
+const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
+  if (!input || typeof input !== 'object') return fallback;
+
+  const toCleanArray = (val, def = []) => {
+    if (Array.isArray(val)) return val.filter(Boolean);
+    if (val && typeof val === 'object') return Object.values(val).filter(Boolean);
+    return def;
+  };
+
+  const cuentas = toCleanArray(input.cuentas, fallback.cuentas);
+  const categorias = toCleanArray(input.categorias, fallback.categorias);
+  const fuentesIngreso = toCleanArray(input.fuentesIngreso, fallback.fuentesIngreso);
+  let movimientos = toCleanArray(input.movimientos, []);
+
+  // Si movimientos viene vacío de Firebase pero el fallback tenía movimientos, conservarlos
+  if (movimientos.length === 0 && fallback.movimientos && fallback.movimientos.length > 0) {
+    movimientos = fallback.movimientos;
+  }
+
+  return {
+    version: input.version || '1.0',
+    clientUpdated: input.clientUpdated || new Date().toISOString(),
+    config: {
+      repartoSueldo: {
+        irpf: input.config?.repartoSueldo?.irpf !== undefined ? input.config.repartoSueldo.irpf : fallback.config.repartoSueldo.irpf,
+        ahorro: input.config?.repartoSueldo?.ahorro !== undefined ? input.config.repartoSueldo.ahorro : fallback.config.repartoSueldo.ahorro,
+        gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
+      },
+      inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija
+    },
+    cuentas: cuentas.length > 0 ? cuentas : fallback.cuentas,
+    categorias: categorias.length > 0 ? categorias : fallback.categorias,
+    fuentesIngreso: fuentesIngreso.length > 0 ? fuentesIngreso : fallback.fuentesIngreso,
+    movimientos
+  };
+};
+
 const FinanceProvider = ({ children }) => {
   const [data, setData] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.movimientos && parsed.movimientos.length > 0) {
-          return parsed;
-        }
+        return normalizeFinanceData(parsed, defaultFallbackData);
       }
     } catch (e) {
       console.warn('Error reading from localStorage:', e);
@@ -165,34 +259,35 @@ const FinanceProvider = ({ children }) => {
     return localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
   });
 
-  // syncStatus: 'synced' | 'syncing' | 'offline' | 'error'
   const [syncStatus, setSyncStatus] = useState('offline');
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const isSyncingRef = useRef(false);
 
-  // Carga inicial desde data.json si el localStorage está vacío o incompleto
+  // Carga inicial desde data.json si el estado local no tiene movimientos
   useEffect(() => {
     const loadInitialDataFile = async () => {
       try {
         const res = await fetch('data.json');
         if (res.ok) {
           const jsonFile = await res.json();
+          const cleanJson = normalizeFinanceData(jsonFile, defaultFallbackData);
           setData(current => {
-            if (!current.movimientos || current.movimientos.length === 0 || (jsonFile.clientUpdated > current.clientUpdated)) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(jsonFile));
-              return jsonFile;
+            if (!current.movimientos || current.movimientos.length === 0 || (cleanJson.clientUpdated > current.clientUpdated)) {
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanJson));
+              } catch (e) {}
+              return cleanJson;
             }
             return current;
           });
         }
       } catch (err) {
-        console.log('No external data.json found, using local storage.');
+        console.log('No external data.json found or fetch failed');
       }
     };
     loadInitialDataFile();
   }, []);
 
-  // Actualizar Firebase URL
   const setFirebaseUrl = (url) => {
     setFirebaseUrlState(url);
     if (url) {
@@ -202,17 +297,16 @@ const FinanceProvider = ({ children }) => {
     }
   };
 
-  // Función para guardar cambios locales y sincronizar inmediatamente con Firebase
   const updateAndSyncData = useCallback(async (updater) => {
     setData(prev => {
-      const nextData = typeof updater === 'function' ? updater(prev) : updater;
-      const updatedData = {
-        ...nextData,
+      const rawNext = typeof updater === 'function' ? updater(prev) : updater;
+      const normalized = normalizeFinanceData({
+        ...rawNext,
         clientUpdated: new Date().toISOString()
-      };
+      }, prev);
       
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       } catch (e) {
         console.error('LocalStorage write error:', e);
       }
@@ -223,7 +317,7 @@ const FinanceProvider = ({ children }) => {
         fetch(firebaseUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedData)
+          body: JSON.stringify(normalized)
         })
           .then(res => {
             if (res.ok) {
@@ -238,7 +332,7 @@ const FinanceProvider = ({ children }) => {
         setSyncStatus('offline');
       }
 
-      return updatedData;
+      return normalized;
     });
   }, [firebaseUrl]);
 
@@ -253,20 +347,15 @@ const FinanceProvider = ({ children }) => {
       const res = await fetch(firebaseUrl);
       if (!res.ok) throw new Error('Firebase HTTP error');
       
-      const cloudData = await res.json();
-      if (cloudData && cloudData.version) {
+      const rawCloud = await res.json();
+      if (rawCloud && rawCloud.version) {
         setData(local => {
+          const cloudData = normalizeFinanceData(rawCloud, local);
           const localTime = new Date(local.clientUpdated || 0).getTime();
           const cloudTime = new Date(cloudData.clientUpdated || 0).getTime();
 
-          if (cloudTime > localTime) {
-            // Nube es más reciente -> actualizar local
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
-            setLastSyncTime(new Date());
-            setSyncStatus('synced');
-            return cloudData;
-          } else if (localTime > cloudTime) {
-            // Local es más reciente -> subir a la nube
+          // Si en la nube hay menos movimientos que en local, actualizar la nube con los locales
+          if (local.movimientos.length > cloudData.movimientos.length) {
             fetch(firebaseUrl, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -276,9 +365,24 @@ const FinanceProvider = ({ children }) => {
               setSyncStatus('synced');
             });
             return local;
-          } else {
+          }
+
+          if (cloudTime >= localTime) {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+            } catch (e) {}
             setLastSyncTime(new Date());
             setSyncStatus('synced');
+            return cloudData;
+          } else {
+            fetch(firebaseUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(local)
+            }).then(() => {
+              setLastSyncTime(new Date());
+              setSyncStatus('synced');
+            });
             return local;
           }
         });
@@ -300,7 +404,7 @@ const FinanceProvider = ({ children }) => {
     }
   }, [firebaseUrl, data]);
 
-  // Sincronización reactiva 24/7 (polling cada 30s + focus + online)
+  // Sincronización reactiva 24/7
   useEffect(() => {
     syncWithCloud();
     const interval = setInterval(syncWithCloud, 30000);
@@ -322,7 +426,7 @@ const FinanceProvider = ({ children }) => {
     const newMov = {
       id: mov.id || `mov-${Date.now()}`,
       fecha: mov.fecha || new Date().toISOString().split('T')[0],
-      tipo: mov.tipo, // 'gasto' | 'ingreso' | 'transferencia'
+      tipo: mov.tipo,
       cuentaOrigen: mov.cuentaOrigen || '',
       cuentaDestino: mov.cuentaDestino || '',
       importe: Math.abs(parseFloat(mov.importe) || 0),
@@ -332,21 +436,21 @@ const FinanceProvider = ({ children }) => {
 
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: [newMov, ...prev.movimientos]
+      movimientos: [newMov, ...(prev.movimientos || [])]
     }));
   };
 
   const updateMovimiento = (id, updatedFields) => {
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: prev.movimientos.map(m => m.id === id ? { ...m, ...updatedFields } : m)
+      movimientos: (prev.movimientos || []).map(m => m.id === id ? { ...m, ...updatedFields } : m)
     }));
   };
 
   const deleteMovimiento = (id) => {
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: prev.movimientos.filter(m => m.id !== id)
+      movimientos: (prev.movimientos || []).filter(m => m.id !== id)
     }));
   };
 
@@ -362,11 +466,11 @@ const FinanceProvider = ({ children }) => {
     const newMovs = [];
     const timestamp = Date.now();
 
-    // 1. Registrar los ingresos de cada nómina
+    // 1. Registrar ingresos por fuente
     Object.entries(incomes).forEach(([fuenteId, amount], idx) => {
       const numAmt = parseFloat(amount) || 0;
       if (numAmt > 0) {
-        const fuenteObj = data.fuentesIngreso.find(f => f.id === fuenteId);
+        const fuenteObj = (data.fuentesIngreso || []).find(f => f.id === fuenteId);
         const nombreFuente = fuenteObj ? fuenteObj.nombre : fuenteId;
         newMovs.push({
           id: `mov-${timestamp + idx * 10}`,
@@ -424,7 +528,7 @@ const FinanceProvider = ({ children }) => {
 
     updateAndSyncData(prev => ({
       ...prev,
-      movimientos: [...newMovs, ...prev.movimientos]
+      movimientos: [...newMovs, ...(prev.movimientos || [])]
     }));
 
     return { totalIngreso, irpfAmount, ahorroAmount, invAmount };
@@ -433,34 +537,35 @@ const FinanceProvider = ({ children }) => {
   const updateConfig = (newConfig) => {
     updateAndSyncData(prev => ({
       ...prev,
-      config: { ...prev.config, ...newConfig }
+      config: { ...(prev.config || {}), ...newConfig }
     }));
   };
 
   const toggleCuenta = (id) => {
     updateAndSyncData(prev => ({
       ...prev,
-      cuentas: prev.cuentas.map(c => c.id === id ? { ...c, activa: !c.activa } : c)
+      cuentas: (prev.cuentas || []).map(c => c.id === id ? { ...c, activa: !c.activa } : c)
     }));
   };
 
   const addCuenta = (cuenta) => {
     updateAndSyncData(prev => ({
       ...prev,
-      cuentas: [...prev.cuentas, { ...cuenta, id: `acc-${Date.now()}`, activa: true }]
+      cuentas: [...(prev.cuentas || []), { ...cuenta, id: `acc-${Date.now()}`, activa: true }]
     }));
   };
 
   const addCategoria = (cat) => {
     updateAndSyncData(prev => ({
       ...prev,
-      categorias: [...prev.categorias, { ...cat, id: `cat-${Date.now()}` }]
+      categorias: [...(prev.categorias || []), { ...cat, id: `cat-${Date.now()}` }]
     }));
   };
 
   const importJsonData = (newJson) => {
-    if (newJson && newJson.movimientos && Array.isArray(newJson.movimientos)) {
-      updateAndSyncData(newJson);
+    if (newJson && typeof newJson === 'object') {
+      const clean = normalizeFinanceData(newJson, data);
+      updateAndSyncData(clean);
       return true;
     }
     return false;
@@ -471,7 +576,8 @@ const FinanceProvider = ({ children }) => {
       const res = await fetch('data.json');
       if (res.ok) {
         const json = await res.json();
-        updateAndSyncData(json);
+        const clean = normalizeFinanceData(json, defaultFallbackData);
+        updateAndSyncData(clean);
         return true;
       }
     } catch (e) {
@@ -483,11 +589,12 @@ const FinanceProvider = ({ children }) => {
   // Cálculo reactivo de saldos individuales y totales
   const saldos = useMemo(() => {
     const bal = {};
-    data.cuentas.forEach(c => {
-      bal[c.id] = c.saldoInicial || 0.0;
+    (data.cuentas || []).forEach(c => {
+      if (c && c.id) bal[c.id] = c.saldoInicial || 0.0;
     });
 
-    data.movimientos.forEach(m => {
+    (data.movimientos || []).forEach(m => {
+      if (!m) return;
       const imp = parseFloat(m.importe) || 0;
       if (m.tipo === 'gasto') {
         if (bal[m.cuentaOrigen] !== undefined) bal[m.cuentaOrigen] -= imp;
@@ -503,8 +610,8 @@ const FinanceProvider = ({ children }) => {
   }, [data.cuentas, data.movimientos]);
 
   const totalPatrimonio = useMemo(() => {
-    return data.cuentas
-      .filter(c => c.activa)
+    return (data.cuentas || [])
+      .filter(c => c && c.activa)
       .reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
 
@@ -552,7 +659,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-white shadow-sm shadow-slate-200">
             <Icon name="wallet" className="w-5 h-5 text-white" />
           </div>
@@ -590,7 +697,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={syncNow}
-            title="Pulsar para forzar sincronización"
+            title="Pulsar para forzar sincronización con Firebase"
             className={`flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${syncInfo.pill}`}
           >
             <span className={`w-2 h-2 rounded-full ${syncInfo.color}`}></span>
@@ -664,7 +771,6 @@ const BottomNav = ({ activeTab, setActiveTab, onOpenNewModal }) => {
 const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) => {
   const { data, saldos, totalPatrimonio } = useFinance();
 
-  // Estadísticas del mes en curso
   const currentMonthStats = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -674,8 +780,8 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
     let ingresos = 0;
     let gastos = 0;
 
-    data.movimientos.forEach(m => {
-      if (m.fecha && m.fecha.startsWith(monthPrefix)) {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.startsWith(monthPrefix)) {
         const imp = parseFloat(m.importe) || 0;
         if (m.tipo === 'ingreso') ingresos += imp;
         if (m.tipo === 'gasto') gastos += imp;
@@ -690,9 +796,8 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
     };
   }, [data.movimientos]);
 
-  // Últimos 8 movimientos
   const recentMovements = useMemo(() => {
-    return data.movimientos.slice(0, 8);
+    return (data.movimientos || []).slice(0, 8);
   }, [data.movimientos]);
 
   return (
@@ -707,14 +812,14 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
               <span>Patrimonio Neto Consolidado</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200">
-                {data.cuentas.filter(c => c.activa).length} Cuentas Activas
+                {(data.cuentas || []).filter(c => c && c.activa).length} Cuentas Activas
               </span>
             </div>
             <div className="text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white font-sans">
               {formatCurrency(totalPatrimonio)}
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Calculado en tiempo real desde el histórico íntegro de {data.movimientos.length} movimientos
+              Calculado en tiempo real desde el histórico íntegro de {(data.movimientos || []).length} movimientos
             </p>
           </div>
 
@@ -782,7 +887,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.cuentas.filter(c => c.activa).map(c => {
+          {(data.cuentas || []).filter(c => c && c.activa).map(c => {
             const saldo = saldos[c.id] || 0;
             const badge = getAccountBadge(c.id, data.cuentas);
             const pctOfTotal = totalPatrimonio > 0 ? Math.max(0, Math.round((saldo / totalPatrimonio) * 100)) : 0;
@@ -835,7 +940,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
           <div>
             <h3 className="text-sm font-bold text-slate-900">Motor de Reparto de Sueldo Automatizado</h3>
             <p className="text-xs text-slate-600">
-              IRPF: <strong>{Math.round(data.config.repartoSueldo.irpf * 100)}%</strong> (Sabadell IRPF) • Ahorro: <strong>{Math.round(data.config.repartoSueldo.ahorro * 100)}%</strong> (Sabadell Ahorro) • Inversión fija: <strong>{formatCurrency(data.config.inversionFija)}</strong> (Trade Republic)
+              IRPF: <strong>{Math.round((data.config?.repartoSueldo?.irpf || 0.18) * 100)}%</strong> (Sabadell IRPF) • Ahorro: <strong>{Math.round((data.config?.repartoSueldo?.ahorro || 0.50) * 100)}%</strong> (Sabadell Ahorro) • Inversión fija: <strong>{formatCurrency(data.config?.inversionFija || 60)}</strong> (Trade Republic)
             </p>
           </div>
         </div>
@@ -858,7 +963,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             onClick={() => setActiveTab('movimientos')}
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
-            Ver todos ({data.movimientos.length}) →
+            Ver todos ({(data.movimientos || []).length}) →
           </button>
         </div>
 
@@ -868,8 +973,8 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             const isIngreso = m.tipo === 'ingreso';
             const isTransfer = m.tipo === 'transferencia';
 
-            const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
-            const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+            const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+            const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
 
             return (
               <div key={m.id} className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3">
@@ -935,26 +1040,25 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 // ⚡ MOTOR DE SUELDO & REPARTO AUTOMÁTICO
 // ==========================================
 const SueldoEngineView = ({ setActiveTab }) => {
-  const { data, distribuirSueldo, updateConfig } = useFinance();
+  const { data, distribuirSueldo } = useFinance();
 
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [incomes, setIncomes] = useState(() => {
     const init = {};
-    data.fuentesIngreso.forEach(f => {
+    (data.fuentesIngreso || []).forEach(f => {
       init[f.id] = '';
     });
     return init;
   });
 
-  const [irpfPct, setIrpfPct] = useState(data.config.repartoSueldo.irpf);
-  const [ahorroPct, setAhorroPct] = useState(data.config.repartoSueldo.ahorro);
-  const [gastoPct, setGastoPct] = useState(data.config.repartoSueldo.gasto);
-  const [inversionFija, setInversionFija] = useState(data.config.inversionFija);
+  const [irpfPct, setIrpfPct] = useState(data.config?.repartoSueldo?.irpf || 0.18);
+  const [ahorroPct, setAhorroPct] = useState(data.config?.repartoSueldo?.ahorro || 0.50);
+  const [gastoPct, setGastoPct] = useState(data.config?.repartoSueldo?.gasto || 0.32);
+  const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
 
   const [distributionResult, setDistributionResult] = useState(null);
 
-  // Cálculo en vivo
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
   }, [incomes]);
@@ -995,16 +1099,14 @@ const SueldoEngineView = ({ setActiveTab }) => {
         fecha,
         preview
       });
-      // Limpiar importes
       const resetIncomes = {};
-      data.fuentesIngreso.forEach(f => { resetIncomes[f.id] = ''; });
+      (data.fuentesIngreso || []).forEach(f => { resetIncomes[f.id] = ''; });
       setIncomes(resetIncomes);
     }
   };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-24 md:pb-8">
-      {/* Cabecera */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 mb-2">
@@ -1028,7 +1130,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Modal de Éxito tras distribuir */}
       {distributionResult && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 relative">
           <button
@@ -1073,7 +1174,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
         </div>
       )}
 
-      {/* Formulario de Registro de Nóminas */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1082,7 +1182,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </h3>
 
           <div className="space-y-3">
-            {data.fuentesIngreso.map(fuente => (
+            {(data.fuentesIngreso || []).map(fuente => (
               <div key={fuente.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <label className="text-xs font-bold text-slate-800 min-w-[130px]">
                   {fuente.nombre}
@@ -1110,14 +1210,13 @@ const SueldoEngineView = ({ setActiveTab }) => {
               onChange={(e) => setCuentaIngreso(e.target.value)}
               className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
             >
-              {data.cuentas.filter(c => c.activa).map(c => (
+              {(data.cuentas || []).filter(c => c && c.activa).map(c => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Previsualización en Vivo del Reparto */}
         <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between space-y-4">
           <div>
             <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
@@ -1191,20 +1290,19 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // Lista de meses disponibles en el histórico
   const availableMonths = useMemo(() => {
     const months = new Set();
-    data.movimientos.forEach(m => {
-      if (m.fecha && m.fecha.length >= 7) {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.length >= 7) {
         months.add(m.fecha.substring(0, 7));
       }
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
 
-  // Filtrado reactivo
   const filteredMovimientos = useMemo(() => {
-    return data.movimientos.filter(m => {
+    return (data.movimientos || []).filter(m => {
+      if (!m) return false;
       if (selectedType !== 'todos' && m.tipo !== selectedType) return false;
       if (selectedAccount !== 'todos') {
         if (m.tipo === 'gasto' && m.cuentaOrigen !== selectedAccount) return false;
@@ -1227,7 +1325,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
     });
   }, [data.movimientos, selectedType, selectedAccount, selectedCategory, selectedMonth, search]);
 
-  // Totales de la selección filtrada
   const filteredTotals = useMemo(() => {
     let gastos = 0;
     let ingresos = 0;
@@ -1239,7 +1336,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
     return { gastos, ingresos, balance: ingresos - gastos };
   }, [filteredMovimientos]);
 
-  // Paginación
   const totalPages = Math.ceil(filteredMovimientos.length / itemsPerPage) || 1;
   const paginatedMovimientos = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -1270,7 +1366,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {/* Filtro de Mes */}
             <select
               value={selectedMonth}
               onChange={(e) => { setSelectedMonth(e.target.value); setCurrentPage(1); }}
@@ -1282,7 +1377,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
               ))}
             </select>
 
-            {/* Filtro de Tipo */}
             <select
               value={selectedType}
               onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
@@ -1294,21 +1388,19 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
               <option value="transferencia">Solo Transferencias</option>
             </select>
 
-            {/* Filtro de Cuenta */}
             <select
               value={selectedAccount}
               onChange={(e) => { setSelectedAccount(e.target.value); setCurrentPage(1); }}
               className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
             >
               <option value="todos">Todas las cuentas</option>
-              {data.cuentas.map(c => (
+              {(data.cuentas || []).map(c => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Resumen de totales filtrados */}
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
           <span className="text-slate-500 font-medium">
             Mostrando <strong>{filteredMovimientos.length}</strong> movimientos
@@ -1324,7 +1416,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
         </div>
       </div>
 
-      {/* Tabla / Lista de Movimientos */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="divide-y divide-slate-100">
           {paginatedMovimientos.length === 0 ? (
@@ -1337,8 +1428,8 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
               const isIngreso = m.tipo === 'ingreso';
               const isTransfer = m.tipo === 'transferencia';
 
-              const origAcc = data.cuentas.find(c => c.id === m.cuentaOrigen);
-              const destAcc = data.cuentas.find(c => c.id === m.cuentaDestino);
+              const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+              const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
 
               return (
                 <div
@@ -1411,7 +1502,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
           )}
         </div>
 
-        {/* Paginación */}
         {totalPages > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs">
             <span className="text-slate-400">
@@ -1445,15 +1535,14 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
 // ==========================================
 const AnaliticaView = () => {
   const { data } = useFinance();
-  const [timeRange, setTimeRange] = useState('2026'); // '2026' | 'all' | '6m' | '3m'
+  const [timeRange, setTimeRange] = useState('2026');
 
-  // Agrupación mensual
   const monthlyData = useMemo(() => {
     const map = {};
 
-    data.movimientos.forEach(m => {
-      if (!m.fecha || m.fecha.length < 7) return;
-      const monthKey = m.fecha.substring(0, 7); // YYYY-MM
+    (data.movimientos || []).forEach(m => {
+      if (!m || !m.fecha || m.fecha.length < 7) return;
+      const monthKey = m.fecha.substring(0, 7);
       if (!map[monthKey]) {
         map[monthKey] = { mes: monthKey, ingresos: 0, gastos: 0, transferencias: 0 };
       }
@@ -1464,21 +1553,18 @@ const AnaliticaView = () => {
     });
 
     const sorted = Object.values(map).sort((a, b) => a.mes.localeCompare(b.mes));
-    
-    // Filtrar según rango
     if (timeRange === '3m') return sorted.slice(-3);
     if (timeRange === '6m') return sorted.slice(-6);
     if (timeRange === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
     return sorted;
   }, [data.movimientos, timeRange]);
 
-  // Gastos por categoría
   const categoryExpenses = useMemo(() => {
     const map = {};
     let totalGasto = 0;
 
-    data.movimientos.forEach(m => {
-      if (m.tipo === 'gasto') {
+    (data.movimientos || []).forEach(m => {
+      if (m && m.tipo === 'gasto') {
         const cat = m.categoria || 'Otros';
         const imp = parseFloat(m.importe) || 0;
         map[cat] = (map[cat] || 0) + imp;
@@ -1495,17 +1581,15 @@ const AnaliticaView = () => {
       .sort((a, b) => b.importe - a.importe);
   }, [data.movimientos]);
 
-  // Evolución del Patrimonio Mes a Mes (Gráfico de Líneas)
   const patrimonioEvolution = useMemo(() => {
-    const initialSum = data.cuentas.reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
+    const initialSum = (data.cuentas || []).reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
     let runningTotal = initialSum;
     const history = [];
 
-    // Todos los meses ordenados
-    const allMonths = Array.from(new Set(data.movimientos.map(m => m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
+    const allMonths = Array.from(new Set((data.movimientos || []).map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
 
     allMonths.forEach(mKey => {
-      const monthMovs = data.movimientos.filter(m => m.fecha && m.fecha.startsWith(mKey));
+      const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(mKey));
       monthMovs.forEach(m => {
         const imp = parseFloat(m.importe) || 0;
         if (m.tipo === 'ingreso') runningTotal += imp;
@@ -1520,9 +1604,8 @@ const AnaliticaView = () => {
     return history;
   }, [data.cuentas, data.movimientos, timeRange]);
 
-  // Generador de puntos SVG para el gráfico de línea
   const lineChartData = useMemo(() => {
-    if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], maxVal: 0, minVal: 0 };
+    if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], maxVal: 0, minVal: 0, width: 600, height: 220 };
 
     const values = patrimonioEvolution.map(d => d.total);
     const minVal = Math.min(...values, 0);
@@ -1540,7 +1623,7 @@ const AnaliticaView = () => {
     });
 
     const path = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
-    const area = `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+    const area = points.length > 0 ? `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z` : '';
 
     return { path, area, points, maxVal, minVal, width, height };
   }, [patrimonioEvolution]);
@@ -1551,7 +1634,6 @@ const AnaliticaView = () => {
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Selector de Rango Temporal */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900">Analítica & Evolución</h2>
@@ -1578,7 +1660,7 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* Gráfico 1: Evolución del Patrimonio Neto */}
+      {/* Gráfico 1: Evolución del Patrimonio */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -1604,16 +1686,13 @@ const AnaliticaView = () => {
               </linearGradient>
             </defs>
 
-            {/* Grid horizontal */}
             <line x1="30" y1="30" x2="570" y2="30" stroke="#f1f5f9" strokeWidth="1" />
             <line x1="30" y1="110" x2="570" y2="110" stroke="#f1f5f9" strokeWidth="1" />
             <line x1="30" y1="190" x2="570" y2="190" stroke="#e2e8f0" strokeWidth="1" />
 
-            {/* Área y Línea */}
             {lineChartData.area && <path d={lineChartData.area} fill="url(#patrimonioGrad)" />}
             {lineChartData.path && <path d={lineChartData.path} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />}
 
-            {/* Puntos y etiquetas */}
             {lineChartData.points.map((p, i) => (
               <g key={i}>
                 <circle cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke="#2563eb" strokeWidth="2.5" />
@@ -1627,17 +1706,12 @@ const AnaliticaView = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 2: Ingresos vs Gastos Mensuales */}
+        {/* Gráfico 2: Ingresos vs Gastos */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Icon name="chart" className="w-4 h-4 text-emerald-600" />
-                Ingresos vs Gastos por Mes
-              </h3>
-              <p className="text-xs text-slate-500">Comparativa mensual de flujo</p>
-            </div>
-          </div>
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Icon name="chart" className="w-4 h-4 text-emerald-600" />
+            Ingresos vs Gastos por Mes
+          </h3>
 
           <div className="space-y-3 pt-2">
             {monthlyData.map(m => {
@@ -1709,10 +1783,10 @@ const AjustesView = () => {
   } = useFinance();
 
   const [inputUrl, setInputUrl] = useState(firebaseUrl);
-  const [irpf, setIrpf] = useState(data.config.repartoSueldo.irpf * 100);
-  const [ahorro, setAhorro] = useState(data.config.repartoSueldo.ahorro * 100);
-  const [gasto, setGasto] = useState(data.config.repartoSueldo.gasto * 100);
-  const [invFija, setInvFija] = useState(data.config.inversionFija);
+  const [irpf, setIrpf] = useState((data.config?.repartoSueldo?.irpf || 0.18) * 100);
+  const [ahorro, setAhorro] = useState((data.config?.repartoSueldo?.ahorro || 0.50) * 100);
+  const [gasto, setGasto] = useState((data.config?.repartoSueldo?.gasto || 0.32) * 100);
+  const [invFija, setInvFija] = useState(data.config?.inversionFija || 60.00);
   const [statusMsg, setStatusMsg] = useState('');
 
   const handleSaveFirebase = (e) => {
@@ -1895,7 +1969,7 @@ const AjustesView = () => {
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <h3 className="text-sm font-bold text-slate-900">Visibilidad de Cuentas</h3>
         <div className="space-y-2">
-          {data.cuentas.map(c => (
+          {(data.cuentas || []).map(c => (
             <div key={c.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex items-center gap-2.5">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }}></span>
@@ -2009,7 +2083,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
-        {/* Cabecera */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
             {editingMovement ? 'Editar Movimiento' : 'Nuevo Movimiento'}
@@ -2020,7 +2093,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Selector de Tipo */}
           <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
             {[
               { id: 'gasto', label: 'Gasto', color: 'text-rose-600' },
@@ -2040,7 +2112,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
             ))}
           </div>
 
-          {/* Importe */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Importe (€)</label>
             <input
@@ -2056,7 +2127,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
             />
           </div>
 
-          {/* Fecha */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Fecha</label>
             <input
@@ -2067,7 +2137,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
             />
           </div>
 
-          {/* Cuentas Origen y Destino */}
           {tipo === 'gasto' && (
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Cuenta</label>
@@ -2076,7 +2145,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
                 onChange={(e) => setCuentaOrigen(e.target.value)}
                 className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
               >
-                {data.cuentas.filter(c => c.activa).map(c => (
+                {(data.cuentas || []).filter(c => c && c.activa).map(c => (
                   <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
@@ -2091,7 +2160,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
                 onChange={(e) => setCuentaDestino(e.target.value)}
                 className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
               >
-                {data.cuentas.filter(c => c.activa).map(c => (
+                {(data.cuentas || []).filter(c => c && c.activa).map(c => (
                   <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
@@ -2107,7 +2176,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
                   onChange={(e) => setCuentaOrigen(e.target.value)}
                   className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
                 >
-                  {data.cuentas.filter(c => c.activa).map(c => (
+                  {(data.cuentas || []).filter(c => c && c.activa).map(c => (
                     <option key={c.id} value={c.id}>{c.nombre}</option>
                   ))}
                 </select>
@@ -2119,7 +2188,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
                   onChange={(e) => setCuentaDestino(e.target.value)}
                   className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
                 >
-                  {data.cuentas.filter(c => c.activa).map(c => (
+                  {(data.cuentas || []).filter(c => c && c.activa).map(c => (
                     <option key={c.id} value={c.id}>{c.nombre}</option>
                   ))}
                 </select>
@@ -2127,7 +2196,6 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
             </div>
           )}
 
-          {/* Categoría */}
           {tipo !== 'transferencia' && (
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Categoría</label>
@@ -2136,14 +2204,13 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
                 onChange={(e) => setCategoria(e.target.value)}
                 className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
               >
-                {data.categorias.filter(c => c.tipo === tipo || c.tipo === 'mixto').map(c => (
+                {(data.categorias || []).filter(c => c && (c.tipo === tipo || c.tipo === 'mixto')).map(c => (
                   <option key={c.id} value={c.nombre}>{c.nombre}</option>
                 ))}
               </select>
             </div>
           )}
 
-          {/* Comentario */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Comentario / Nota (Opcional)</label>
             <input
@@ -2203,58 +2270,60 @@ const App = () => {
   };
 
   return (
-    <FinanceProvider>
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white">
-        <Navbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenNewModal={() => handleOpenNewModal('gasto')}
-        />
+    <ErrorBoundary>
+      <FinanceProvider>
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white">
+          <Navbar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onOpenNewModal={() => handleOpenNewModal('gasto')}
+          />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              setActiveTab={setActiveTab}
-              onOpenNewModal={handleOpenNewModal}
-              onSelectAccountFilter={handleSelectAccountFilter}
-            />
-          )}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
+            {activeTab === 'dashboard' && (
+              <DashboardView
+                setActiveTab={setActiveTab}
+                onOpenNewModal={handleOpenNewModal}
+                onSelectAccountFilter={handleSelectAccountFilter}
+              />
+            )}
 
-          {activeTab === 'sueldo' && (
-            <SueldoEngineView setActiveTab={setActiveTab} />
-          )}
+            {activeTab === 'sueldo' && (
+              <SueldoEngineView setActiveTab={setActiveTab} />
+            )}
 
-          {activeTab === 'movimientos' && (
-            <MovimientosView
-              initialAccountFilter={accountFilter}
-              onOpenNewModal={handleOpenNewModal}
-              onEditModal={handleEditModal}
-            />
-          )}
+            {activeTab === 'movimientos' && (
+              <MovimientosView
+                initialAccountFilter={accountFilter}
+                onOpenNewModal={handleOpenNewModal}
+                onEditModal={handleEditModal}
+              />
+            )}
 
-          {activeTab === 'analitica' && (
-            <AnaliticaView />
-          )}
+            {activeTab === 'analitica' && (
+              <AnaliticaView />
+            )}
 
-          {activeTab === 'ajustes' && (
-            <AjustesView />
-          )}
-        </main>
+            {activeTab === 'ajustes' && (
+              <AjustesView />
+            )}
+          </main>
 
-        <BottomNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenNewModal={() => handleOpenNewModal('gasto')}
-        />
+          <BottomNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onOpenNewModal={() => handleOpenNewModal('gasto')}
+          />
 
-        <MovementModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          editingMovement={editingMovement}
-          defaultType={defaultModalType}
-        />
-      </div>
-    </FinanceProvider>
+          <MovementModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            editingMovement={editingMovement}
+            defaultType={defaultModalType}
+          />
+        </div>
+      </FinanceProvider>
+    </ErrorBoundary>
   );
 };
 
