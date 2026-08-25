@@ -1876,31 +1876,67 @@ const AnaliticaView = () => {
     return sorted;
   }, [data.movimientos, periodoFilter, selectedSpecificMonth]);
 
-  // Evolución del Patrimonio Neto Disponible
+  // Evolución del Patrimonio Neto Disponible (Calculado por cuenta respetando incluirEnTotal)
+  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
+
   const patrimonioEvolution = useMemo(() => {
-    const initialSum = (data.cuentas || [])
-      .filter(c => c && c.incluirEnTotal !== false)
-      .reduce((sum, c) => sum + (c.saldoInicial || 0), 0);
-    let runningTotal = initialSum;
+    const activeCuentasMap = {};
+    (data.cuentas || []).forEach(c => {
+      if (c && c.activa) {
+        activeCuentasMap[c.id] = {
+          saldo: c.saldoInicial || 0,
+          incluirEnTotal: c.incluirEnTotal !== false
+        };
+      }
+    });
+
+    const movsSorted = [...(data.movimientos || [])].sort((a, b) => {
+      const dComp = (a.fecha || '').localeCompare(b.fecha || '');
+      if (dComp !== 0) return dComp;
+      return (a.id || '').localeCompare(b.id || '');
+    });
+
+    const allMonths = Array.from(
+      new Set(movsSorted.map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))
+    ).filter(Boolean).sort();
+
     const history = [];
 
-    const allMonths = Array.from(new Set((data.movimientos || []).map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
-
     allMonths.forEach(mKey => {
-      const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(mKey));
+      const monthMovs = movsSorted.filter(m => m && m.fecha && m.fecha.startsWith(mKey));
       monthMovs.forEach(m => {
         const imp = parseFloat(m.importe) || 0;
-        if (m.tipo === 'ingreso') runningTotal += imp;
-        if (m.tipo === 'gasto') runningTotal -= imp;
+        if (m.tipo === 'gasto') {
+          if (activeCuentasMap[m.cuentaOrigen]) activeCuentasMap[m.cuentaOrigen].saldo -= imp;
+        } else if (m.tipo === 'ingreso') {
+          if (activeCuentasMap[m.cuentaDestino]) activeCuentasMap[m.cuentaDestino].saldo += imp;
+        } else if (m.tipo === 'transferencia') {
+          if (activeCuentasMap[m.cuentaOrigen]) activeCuentasMap[m.cuentaOrigen].saldo -= imp;
+          if (activeCuentasMap[m.cuentaDestino]) activeCuentasMap[m.cuentaDestino].saldo += imp;
+        }
       });
-      history.push({ mes: mKey, total: runningTotal });
+
+      const totalDisponible = Object.values(activeCuentasMap)
+        .filter(c => c.incluirEnTotal)
+        .reduce((sum, c) => sum + c.saldo, 0);
+
+      const totalConIrpf = Object.values(activeCuentasMap)
+        .reduce((sum, c) => sum + c.saldo, 0);
+
+      history.push({
+        mes: mKey,
+        total: showIrpfInChart ? totalConIrpf : totalDisponible,
+        totalDisponible,
+        totalConIrpf
+      });
     });
 
     if (periodoFilter === '3m') return history.slice(-3);
     if (periodoFilter === '6m') return history.slice(-6);
     if (periodoFilter === '2026') return history.filter(h => h.mes.startsWith('2026'));
+    if (periodoFilter === 'mes') return history.filter(h => h.mes === selectedSpecificMonth);
     return history;
-  }, [data.cuentas, data.movimientos, periodoFilter]);
+  }, [data.cuentas, data.movimientos, periodoFilter, selectedSpecificMonth, showIrpfInChart]);
 
   const lineChartData = useMemo(() => {
     if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], width: 600, height: 220 };
@@ -2143,21 +2179,45 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* Gráfico 1: Evolución del Patrimonio Neto Disponible */}
+      {/* Gráfico 1: Evolución del Patrimonio */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Icon name="trendingUp" className="w-4 h-4 text-blue-600" />
-              Evolución del Patrimonio Neto Disponible (€)
+              {showIrpfInChart ? 'Evolución del Patrimonio Total Consolidado (€)' : 'Evolución del Patrimonio Neto Disponible (€)'}
             </h3>
-            <p className="text-xs text-slate-500">Crecimiento real de cuentas operativas e inversión (sin IRPF)</p>
+            <p className="text-xs text-slate-500">
+              {showIrpfInChart ? 'Incluye todas las cuentas activas (con Sabadell IRPF)' : 'Solo cuentas computables en el total (excluye Sabadell IRPF)'}
+            </p>
           </div>
-          {lineChartData.points.length > 0 && (
-            <span className="text-sm font-bold text-slate-900 font-sans">
-              Último: {formatCurrency(lineChartData.points[lineChartData.points.length - 1].total)}
-            </span>
-          )}
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+              <button
+                onClick={() => setShowIrpfInChart(false)}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  !showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Sin IRPF
+              </button>
+              <button
+                onClick={() => setShowIrpfInChart(true)}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Con IRPF
+              </button>
+            </div>
+
+            {lineChartData.points.length > 0 && (
+              <span className="text-sm font-bold text-slate-900 font-sans">
+                Último: {formatCurrency(lineChartData.points[lineChartData.points.length - 1].total)}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="w-full overflow-x-auto">
