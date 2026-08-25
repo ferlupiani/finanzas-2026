@@ -2224,14 +2224,24 @@ const MovimientosView = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
-  // Modificación 2: Vista Lista Detallada vs Vista Compacta por Fechas
+  // Modificación: Vista Lista Detallada vs Vista Compacta por Fechas (Plegada por defecto)
   const [viewMode, setViewMode] = useState('compactByDate'); // 'compactByDate' | 'detailed'
   const [expandedDates, setExpandedDates] = useState(() => ({}));
   const toggleDateExpand = dateKey => {
     setExpandedDates(prev => ({
       ...prev,
-      [dateKey]: prev[dateKey] === undefined ? false : !prev[dateKey]
+      [dateKey]: !prev[dateKey]
     }));
+  };
+  const expandAllDates = () => {
+    const allExp = {};
+    groupedByDate.forEach(g => {
+      allExp[g.fecha] = true;
+    });
+    setExpandedDates(allExp);
+  };
+  const collapseAllDates = () => {
+    setExpandedDates({});
   };
   const availableMonths = useMemo(() => {
     const months = new Set();
@@ -2406,10 +2416,24 @@ const MovimientosView = ({
     className: "text-emerald-600 font-sans"
   }, "+", formatCurrency(filteredTotals.ingresos)))))), viewMode === 'compactByDate' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
-  }, groupedByDate.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, groupedByDate.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between px-1 text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-medium"
+  }, "Toca cualquier día para abrir sus movimientos"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: expandAllDates,
+    className: "text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline"
+  }, "Desplegar todos"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "•"), /*#__PURE__*/React.createElement("button", {
+    onClick: collapseAllDates,
+    className: "text-[11px] font-bold text-slate-500 hover:text-slate-700 hover:underline"
+  }, "Plegar todos"))), groupedByDate.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "p-12 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200"
   }, "No se han encontrado movimientos con los filtros seleccionados.") : groupedByDate.map(group => {
-    const isExpanded = expandedDates[group.fecha] !== false; // Abierto por defecto
+    const isExpanded = !!expandedDates[group.fecha]; // Plegado por defecto
 
     return /*#__PURE__*/React.createElement("div", {
       key: group.fecha,
