@@ -3077,7 +3077,10 @@ const AnaliticaView = () => {
       </div>
 
       {/* GRÁFICA INTERACTIVA CON TOOLTIP ON HOVER (CON ESPACIO Y SIN CORTES DE BORDE) */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+      <div
+        onMouseLeave={() => setHoveredPoint(null)}
+        className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+      >
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -3094,10 +3097,14 @@ const AnaliticaView = () => {
           </span>
         </div>
 
-        <div className="relative w-full select-none pt-4 pb-2">
+        <div
+          onMouseLeave={() => setHoveredPoint(null)}
+          className="relative w-full select-none pt-4 pb-2"
+        >
           <svg
             viewBox={`0 0 ${chartGraphData.width || 700} ${chartGraphData.height || 260}`}
             className="w-full h-72 overflow-visible"
+            onMouseLeave={() => setHoveredPoint(null)}
           >
             <defs>
               <linearGradient id="varianceGrad" x1="0" y1="0" x2="0" y2="1">
@@ -3221,7 +3228,10 @@ const AnaliticaView = () => {
       </div>
 
       {/* TABLA DE RECORRIDO Y VARIANZA MES A MES (ESTILO EXCEL) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div
+        onMouseLeave={() => setHoveredPoint(null)}
+        className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
+      >
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -3233,7 +3243,10 @@ const AnaliticaView = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table
+            onMouseLeave={() => setHoveredPoint(null)}
+            className="w-full text-left text-xs border-collapse"
+          >
             <thead>
               <tr className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/80">
                 <th className="p-3.5 pl-5">Mes</th>
@@ -3261,6 +3274,7 @@ const AnaliticaView = () => {
                     <tr
                       key={row.mes}
                       onMouseEnter={() => setHoveredPoint(chartGraphData.points.find(p => p.mes === row.mes))}
+                      onMouseLeave={() => setHoveredPoint(null)}
                       className="hover:bg-blue-50/40 transition-colors"
                     >
                       <td className="p-3.5 pl-5 font-bold text-slate-900 flex items-center gap-2">

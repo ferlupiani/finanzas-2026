@@ -3114,6 +3114,7 @@ const AnaliticaView = () => {
   }, activePoint.diff > 0 ? `+${formatCurrency(activePoint.diff)}` : formatCurrency(activePoint.diff), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px]"
   }, "(", activePoint.diff > 0 ? '+' : '', activePoint.diffPct.toFixed(1), "%)"))))), /*#__PURE__*/React.createElement("div", {
+    onMouseLeave: () => setHoveredPoint(null),
     className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
@@ -3127,10 +3128,12 @@ const AnaliticaView = () => {
   }, "Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.")), /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200"
   }, monthlyVarianceHistory.length, " Meses computados")), /*#__PURE__*/React.createElement("div", {
+    onMouseLeave: () => setHoveredPoint(null),
     className: "relative w-full select-none pt-4 pb-2"
   }, /*#__PURE__*/React.createElement("svg", {
     viewBox: `0 0 ${chartGraphData.width || 700} ${chartGraphData.height || 260}`,
-    className: "w-full h-72 overflow-visible"
+    className: "w-full h-72 overflow-visible",
+    onMouseLeave: () => setHoveredPoint(null)
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: "varianceGrad",
     x1: "0",
@@ -3251,6 +3254,7 @@ const AnaliticaView = () => {
       className: "text-[10px] ml-1"
     }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)"))));
   })())), /*#__PURE__*/React.createElement("div", {
+    onMouseLeave: () => setHoveredPoint(null),
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between"
@@ -3264,6 +3268,7 @@ const AnaliticaView = () => {
   }, "Histórico numérico mes a mes con balances de entrada, salida y cambio neto"))), /*#__PURE__*/React.createElement("div", {
     className: "overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
+    onMouseLeave: () => setHoveredPoint(null),
     className: "w-full text-left text-xs border-collapse"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     className: "bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/80"
@@ -3292,6 +3297,7 @@ const AnaliticaView = () => {
     return /*#__PURE__*/React.createElement("tr", {
       key: row.mes,
       onMouseEnter: () => setHoveredPoint(chartGraphData.points.find(p => p.mes === row.mes)),
+      onMouseLeave: () => setHoveredPoint(null),
       className: "hover:bg-blue-50/40 transition-colors"
     }, /*#__PURE__*/React.createElement("td", {
       className: "p-3.5 pl-5 font-bold text-slate-900 flex items-center gap-2"
