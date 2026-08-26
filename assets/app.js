@@ -2373,6 +2373,18 @@ const MovimientosView = ({
   }, "Solo Ingresos"), /*#__PURE__*/React.createElement("option", {
     value: "transferencia"
   }, "Solo Transferencias")), /*#__PURE__*/React.createElement("select", {
+    value: selectedCategory,
+    onChange: e => {
+      setSelectedCategory(e.target.value);
+      setCurrentPage(1);
+    },
+    className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todas"
+  }, "🏷️ Todas las categorías"), (data.categorias || []).map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.nombre
+  }, c.nombre))), /*#__PURE__*/React.createElement("select", {
     value: selectedAccount,
     onChange: e => {
       setSelectedAccount(e.target.value);
@@ -3436,12 +3448,13 @@ const MovementModal = ({
   const [comentario, setComentario] = useState('');
   useEffect(() => {
     if (editingMovement) {
-      setTipo(editingMovement.tipo || 'gasto');
+      const mTipo = editingMovement.tipo || 'gasto';
+      setTipo(mTipo);
       setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
       setImporte(editingMovement.importe?.toString() || '');
       setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
       setCuentaDestino(editingMovement.cuentaDestino || 'acc-bbva');
-      setCategoria(editingMovement.categoria || 'Comida');
+      setCategoria(mTipo === 'transferencia' ? 'Transferencia' : editingMovement.categoria || 'Comida');
       setComentario(editingMovement.comentario || '');
     } else {
       setTipo(defaultType);
@@ -3449,7 +3462,7 @@ const MovementModal = ({
       setImporte('');
       setCuentaOrigen('acc-santander');
       setCuentaDestino('acc-bbva');
-      setCategoria(defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
+      setCategoria(defaultType === 'transferencia' ? 'Transferencia' : defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
       setComentario('');
     }
   }, [editingMovement, defaultType, isOpen]);
@@ -3467,7 +3480,7 @@ const MovementModal = ({
       cuentaOrigen: tipo !== 'ingreso' ? cuentaOrigen : '',
       cuentaDestino: tipo !== 'gasto' ? cuentaDestino : '',
       importe: num,
-      categoria: tipo === 'transferencia' ? categoria || 'Transferencia' : categoria,
+      categoria: tipo === 'transferencia' ? 'Transferencia' : categoria || 'General',
       comentario
     };
     if (editingMovement) {
@@ -3511,7 +3524,10 @@ const MovementModal = ({
   }].map(t => /*#__PURE__*/React.createElement("button", {
     key: t.id,
     type: "button",
-    onClick: () => setTipo(t.id),
+    onClick: () => {
+      setTipo(t.id);
+      if (t.id === 'transferencia') setCategoria('Transferencia');else if (t.id === 'ingreso' && (categoria === 'Transferencia' || categoria === 'Comida')) setCategoria('Sueldo/Nómina');else if (t.id === 'gasto' && (categoria === 'Transferencia' || categoria === 'Sueldo/Nómina')) setCategoria('Comida');
+    },
     className: `py-2 rounded-xl text-xs font-bold transition-all ${tipo === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`
   }, t.label))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "text-xs font-bold text-slate-700 block mb-1"

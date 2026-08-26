@@ -2138,6 +2138,17 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
             </select>
 
             <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+              className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+            >
+              <option value="todas">🏷️ Todas las categorías</option>
+              {(data.categorias || []).map(c => (
+                <option key={c.id} value={c.nombre}>{c.nombre}</option>
+              ))}
+            </select>
+
+            <select
               value={selectedAccount}
               onChange={(e) => { setSelectedAccount(e.target.value); setCurrentPage(1); }}
               className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
@@ -3377,12 +3388,13 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
 
   useEffect(() => {
     if (editingMovement) {
-      setTipo(editingMovement.tipo || 'gasto');
+      const mTipo = editingMovement.tipo || 'gasto';
+      setTipo(mTipo);
       setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
       setImporte(editingMovement.importe?.toString() || '');
       setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
       setCuentaDestino(editingMovement.cuentaDestino || 'acc-bbva');
-      setCategoria(editingMovement.categoria || 'Comida');
+      setCategoria(mTipo === 'transferencia' ? 'Transferencia' : (editingMovement.categoria || 'Comida'));
       setComentario(editingMovement.comentario || '');
     } else {
       setTipo(defaultType);
@@ -3390,7 +3402,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
       setImporte('');
       setCuentaOrigen('acc-santander');
       setCuentaDestino('acc-bbva');
-      setCategoria(defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
+      setCategoria(defaultType === 'transferencia' ? 'Transferencia' : defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
       setComentario('');
     }
   }, [editingMovement, defaultType, isOpen]);
@@ -3411,7 +3423,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
       cuentaOrigen: tipo !== 'ingreso' ? cuentaOrigen : '',
       cuentaDestino: tipo !== 'gasto' ? cuentaDestino : '',
       importe: num,
-      categoria: tipo === 'transferencia' ? (categoria || 'Transferencia') : categoria,
+      categoria: tipo === 'transferencia' ? 'Transferencia' : (categoria || 'General'),
       comentario
     };
 
@@ -3445,7 +3457,12 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTipo(t.id)}
+                onClick={() => {
+                  setTipo(t.id);
+                  if (t.id === 'transferencia') setCategoria('Transferencia');
+                  else if (t.id === 'ingreso' && (categoria === 'Transferencia' || categoria === 'Comida')) setCategoria('Sueldo/Nómina');
+                  else if (t.id === 'gasto' && (categoria === 'Transferencia' || categoria === 'Sueldo/Nómina')) setCategoria('Comida');
+                }}
                 className={`py-2 rounded-xl text-xs font-bold transition-all ${
                   tipo === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
                 }`}
