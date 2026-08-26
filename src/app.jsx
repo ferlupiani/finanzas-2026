@@ -178,6 +178,7 @@ const getAccountBadge = (accId, cuentas = []) => {
     case 'acc-sab-ahorro': return { ...acc, bgClass: 'bg-sky-50 text-sky-700 border-sky-200' };
     case 'acc-sab-irpf': return { ...acc, bgClass: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
     case 'acc-trade': return { ...acc, bgClass: 'bg-zinc-100 text-zinc-900 border-zinc-300' };
+    case 'acc-myinvestor': return { ...acc, bgClass: 'bg-purple-50 text-purple-700 border-purple-200' };
     case 'acc-efectivo': return { ...acc, bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
     default: return { ...acc, bgClass: 'bg-slate-100 text-slate-800 border-slate-200' };
   }
@@ -193,11 +194,12 @@ const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 
 const defaultFallbackData = {
-  version: '1.3',
+  version: '1.4',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: { irpf: 0.18, ahorro: 0.50, gasto: 0.32 },
-    inversionFija: 60.00,
+    inversionFija: 200.00,
+    cuentaInversionDefecto: 'acc-myinvestor',
     gastosFijosDefecto: [
       { id: 'gf-1', nombre: 'Alquiler + Gastos Casa', categoria: 'Alquiler', cuenta: 'acc-santander', importe: 325.00 },
       { id: 'gf-2', nombre: 'Spotify', categoria: 'Suscripciones', cuenta: 'acc-santander', importe: 6.49 },
@@ -214,7 +216,8 @@ const defaultFallbackData = {
     { id: 'acc-bbva', nombre: 'BBVA', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#1E3A8A', saldoInicial: 234.67 },
     { id: 'acc-sab-ahorro', nombre: 'Sabadell Ahorro', tipo: 'banco', activa: true, incluirEnTotal: true, color: '#0284C7', saldoInicial: 1239.81 },
     { id: 'acc-sab-irpf', nombre: 'Sabadell IRPF', tipo: 'banco', activa: true, incluirEnTotal: false, color: '#0EA5E9', saldoInicial: 202.16 },
-    { id: 'acc-trade', nombre: 'Trade Republic', tipo: 'inversion', activa: true, incluirEnTotal: true, color: '#18181B', saldoInicial: -313.25 },
+    { id: 'acc-trade', nombre: 'Trade Republic', tipo: 'inversion', activa: true, incluirEnTotal: false, color: '#18181B', saldoInicial: -313.25 },
+    { id: 'acc-myinvestor', nombre: 'MyInvestor', tipo: 'inversion', activa: true, incluirEnTotal: false, color: '#8B5CF6', saldoInicial: 0.00 },
     { id: 'acc-efectivo', nombre: 'Efectivo', tipo: 'metalico', activa: true, incluirEnTotal: true, color: '#16A34A', saldoInicial: 810.00 }
   ],
   categorias: [
@@ -259,9 +262,26 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     return def;
   };
 
-  const cuentas = toCleanArray(input.cuentas, fallback.cuentas).map(c => ({
+  const rawCuentas = toCleanArray(input.cuentas, fallback.cuentas);
+  // Ensure acc-myinvestor exists
+  const hasMyInvestor = rawCuentas.some(c => c && c.id === 'acc-myinvestor');
+  if (!hasMyInvestor) {
+    rawCuentas.push({
+      id: 'acc-myinvestor',
+      nombre: 'MyInvestor',
+      tipo: 'inversion',
+      activa: true,
+      incluirEnTotal: false,
+      color: '#8B5CF6',
+      saldoInicial: 0.00
+    });
+  }
+
+  const cuentas = rawCuentas.map(c => ({
     ...c,
-    incluirEnTotal: c.id === 'acc-sab-irpf' ? (c.incluirEnTotal === true) : (c.incluirEnTotal !== false)
+    incluirEnTotal: ['acc-sab-irpf', 'acc-trade', 'acc-myinvestor'].includes(c.id)
+      ? (c.incluirEnTotal === true)
+      : (c.incluirEnTotal !== false)
   }));
 
   const categorias = toCleanArray(input.categorias, fallback.categorias);
@@ -279,7 +299,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
   });
 
   return {
-    version: input.version || '1.3',
+    version: input.version || '1.4',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -288,6 +308,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
         gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
       },
       inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija,
+      cuentaInversionDefecto: input.config?.cuentaInversionDefecto || fallback.config.cuentaInversionDefecto || 'acc-myinvestor',
       gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto),
       ingresosFijosDefecto: toCleanArray(input.config?.ingresosFijosDefecto, fallback.config.ingresosFijosDefecto)
     },
@@ -469,7 +490,7 @@ const FinanceProvider = ({ children }) => {
       cuentaOrigen: mov.cuentaOrigen || '',
       cuentaDestino: mov.cuentaDestino || '',
       importe: Math.abs(parseFloat(mov.importe) || 0),
-      categoria: mov.categoria || '',
+      categoria: mov.tipo === 'transferencia' ? 'Transferencia' : (mov.categoria || 'General'),
       comentario: mov.comentario || ''
     };
 
@@ -601,13 +622,22 @@ const FinanceProvider = ({ children }) => {
     }));
   };
 
-  const distribuirSueldo = ({ fecha, incomes, irpfPct, ahorroPct, gastoPct, inversionFija, cuentaIngreso = 'acc-santander' }) => {
+  const distribuirSueldo = ({
+    fecha,
+    incomes,
+    irpfPct,
+    ahorroPct,
+    gastoPct,
+    inversionAmount,
+    cuentaIngreso = 'acc-santander',
+    cuentaInversion = 'acc-myinvestor'
+  }) => {
     const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
     if (totalIngreso <= 0) return false;
 
     const irpfAmount = Math.round(totalIngreso * (irpfPct || 0.18) * 100) / 100;
     const ahorroAmount = Math.round(totalIngreso * (ahorroPct || 0.50) * 100) / 100;
-    const invAmount = Math.round((inversionFija !== undefined ? inversionFija : 60.00) * 100) / 100;
+    const invAmount = Math.round((inversionAmount !== undefined ? inversionAmount : 200.00) * 100) / 100;
 
     const newMovs = [];
     const timestamp = Date.now();
@@ -656,15 +686,19 @@ const FinanceProvider = ({ children }) => {
     }
 
     if (invAmount > 0) {
+      const targetAcc = cuentaInversion || 'acc-myinvestor';
+      const targetAccObj = (data.cuentas || []).find(c => c.id === targetAcc);
+      const targetAccName = targetAccObj ? targetAccObj.nombre : 'MyInvestor';
+
       newMovs.push({
         id: `mov-${timestamp + 300}`,
         fecha: fecha,
         tipo: 'transferencia',
         cuentaOrigen: cuentaIngreso,
-        cuentaDestino: 'acc-trade',
+        cuentaDestino: targetAcc,
         importe: invAmount,
         categoria: 'Inversiones',
-        comentario: 'Inversión mensual fija'
+        comentario: `Aportación mensual a ${targetAccName}`
       });
     }
 
@@ -673,7 +707,7 @@ const FinanceProvider = ({ children }) => {
       movimientos: [...newMovs, ...(prev.movimientos || [])]
     }));
 
-    return { totalIngreso, irpfAmount, ahorroAmount, invAmount };
+    return { totalIngreso, irpfAmount, ahorroAmount, invAmount, cuentaInversion };
   };
 
   const updateConfig = (newConfig) => {
@@ -749,6 +783,12 @@ const FinanceProvider = ({ children }) => {
       .reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
 
+  const totalInversionConjunta = useMemo(() => {
+    return (data.cuentas || [])
+      .filter(c => c && c.activa && (c.tipo === 'inversion' || c.id === 'acc-trade' || c.id === 'acc-myinvestor'))
+      .reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
+  }, [data.cuentas, saldos]);
+
   const totalPatrimonioAbsoluto = useMemo(() => {
     return (data.cuentas || [])
       .filter(c => c && c.activa)
@@ -759,13 +799,19 @@ const FinanceProvider = ({ children }) => {
     return saldos['acc-sab-irpf'] || 0;
   }, [saldos]);
 
+  const saldoTradeRepublic = useMemo(() => saldos['acc-trade'] || 0, [saldos]);
+  const saldoMyInvestor = useMemo(() => saldos['acc-myinvestor'] || 0, [saldos]);
+
   return (
     <FinanceContext.Provider value={{
       data,
       saldos,
       totalPatrimonio: totalPatrimonioDisponible,
+      totalInversion: totalInversionConjunta,
       totalPatrimonioAbsoluto,
       saldoIrpfSeparado,
+      saldoTradeRepublic,
+      saldoMyInvestor,
       syncStatus,
       lastSyncTime,
       firebaseUrl,
@@ -819,7 +865,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-slate-900 leading-tight">Finanzas 2026</h1>
-            <p className="text-xs text-slate-500 font-medium">Patrimonio & Reparto</p>
+            <p className="text-xs text-slate-500 font-medium">Patrimonio & Inversión</p>
           </div>
         </div>
 
@@ -918,10 +964,19 @@ const BottomNav = ({ activeTab, setActiveTab, onOpenNewModal }) => {
 };
 
 // ==========================================
-// 📊 DASHBOARD PRINCIPAL
+// 📊 DASHBOARD PRINCIPAL CON BLOQUE DE INVERSIÓN
 // ==========================================
 const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) => {
-  const { data, saldos, totalPatrimonio, totalPatrimonioAbsoluto, saldoIrpfSeparado } = useFinance();
+  const {
+    data,
+    saldos,
+    totalPatrimonio,
+    totalInversion,
+    totalPatrimonioAbsoluto,
+    saldoIrpfSeparado,
+    saldoTradeRepublic,
+    saldoMyInvestor
+  } = useFinance();
 
   const currentMonthStats = useMemo(() => {
     const now = new Date();
@@ -957,14 +1012,14 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
       {/* Hero Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white p-6 sm:p-8 shadow-xl shadow-slate-900/10">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-purple-500/10 blur-2xl pointer-events-none"></div>
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <span>Patrimonio Neto Disponible</span>
+              <span>Patrimonio Líquido Disponible</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200">
-                {(data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).length} Cuentas Computables
+                {(data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).length} Cuentas Operativas
               </span>
             </div>
 
@@ -972,13 +1027,19 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
               {formatCurrency(totalPatrimonio)}
             </div>
 
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-purple-950/70 border border-purple-500/40 text-purple-200 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                Inversión (Separada): <strong>{formatCurrency(totalInversion)}</strong>
+              </span>
+
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-cyan-950/60 border border-cyan-500/30 text-cyan-200">
                 <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                Sabadell IRPF (Separado): <strong>{formatCurrency(saldoIrpfSeparado)}</strong>
+                Sabadell IRPF: <strong>{formatCurrency(saldoIrpfSeparado)}</strong>
               </span>
+
               <span className="text-xs text-slate-400">
-                • Total con IRPF: <strong className="text-slate-200 font-sans">{formatCurrency(totalPatrimonioAbsoluto)}</strong>
+                • Total Consolidado: <strong className="text-slate-200 font-sans">{formatCurrency(totalPatrimonioAbsoluto)}</strong>
               </span>
             </div>
           </div>
@@ -1032,8 +1093,93 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 ml-auto"
           >
             <Icon name="zap" className="w-4 h-4 text-slate-950" />
-            Motor Sueldo & Fijos
+            Motor Sueldo & Inversión
           </button>
+        </div>
+      </div>
+
+      {/* BLOQUE DEDICADO DE INVERSIÓN (MyInvestor + Trade Republic) */}
+      <div className="bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 text-white p-6 rounded-3xl border border-purple-800/30 shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 -mt-8 -mr-8 w-48 h-48 rounded-full bg-purple-500/10 blur-2xl pointer-events-none"></div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-200 border border-purple-400/30 mb-1">
+              <Icon name="trendingUp" className="w-3.5 h-3.5 text-purple-300" />
+              Bloque de Inversión Conjunta (No suma al gasto corriente)
+            </div>
+            <h2 className="text-lg font-bold text-white">Cartera de Inversión</h2>
+            <p className="text-xs text-slate-300">Fondo conjunto en MyInvestor y Trade Republic</p>
+          </div>
+
+          <div className="text-left sm:text-right">
+            <span className="text-[11px] text-purple-300 uppercase tracking-wider font-semibold block">Total Invertido</span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-purple-200 font-sans">
+              {formatCurrency(totalInversion)}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+          {/* Card MyInvestor */}
+          <div
+            onClick={() => onSelectAccountFilter('acc-myinvestor')}
+            className="bg-white/10 hover:bg-white/15 border border-purple-400/20 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-3.5 h-3.5 rounded-full bg-purple-500 ring-4 ring-purple-500/20"></span>
+                <div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                    MyInvestor
+                  </h3>
+                  <span className="text-[10px] text-purple-200 font-medium">
+                    Aportaciones activas mensuales
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                Principal
+              </span>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between">
+              <span className="text-xs text-purple-200 font-medium">Saldo acumulado</span>
+              <span className="text-xl font-extrabold text-white font-sans">
+                {formatCurrency(saldoMyInvestor)}
+              </span>
+            </div>
+          </div>
+
+          {/* Card Trade Republic */}
+          <div
+            onClick={() => onSelectAccountFilter('acc-trade')}
+            className="bg-white/5 hover:bg-white/10 border border-white/10 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-3.5 h-3.5 rounded-full bg-zinc-400 ring-4 ring-white/10"></span>
+                <div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-zinc-300 transition-colors">
+                    Trade Republic
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Fondo consolidado (sin nuevas aportaciones)
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                Mantenido
+              </span>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between">
+              <span className="text-xs text-slate-400 font-medium">Saldo disponible</span>
+              <span className="text-xl font-extrabold text-slate-200 font-sans">
+                {formatCurrency(saldoTradeRepublic)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1048,7 +1194,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
           {(data.cuentas || []).filter(c => c && c.activa).map(c => {
             const saldo = saldos[c.id] || 0;
             const badge = getAccountBadge(c.id, data.cuentas);
-            const isIrpfExcluded = c.incluirEnTotal === false;
+            const isExcluded = c.incluirEnTotal === false;
 
             return (
               <div
@@ -1067,14 +1213,14 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
                         {c.nombre}
                       </h3>
                       <span className="text-[11px] font-medium text-slate-400 capitalize">
-                        {c.tipo}
+                        {c.tipo === 'inversion' ? 'Inversión' : c.tipo}
                       </span>
                     </div>
                   </div>
 
-                  {isIrpfExcluded ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">
-                      No suma al total
+                  {isExcluded ? (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge.bgClass}`}>
+                      {c.tipo === 'inversion' ? 'Bloque Inversión' : 'No suma al total'}
                     </span>
                   ) : (
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.bgClass}`}>
@@ -1084,7 +1230,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400 font-medium">Saldo disponible</span>
+                  <span className="text-xs text-slate-400 font-medium">Saldo</span>
                   <span className={`text-xl font-bold font-sans ${saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
                     {formatCurrency(saldo)}
                   </span>
@@ -1180,7 +1326,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & BENEFICIOS (Modificaciones 1 & 3)
+// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & INVERSIONES (MyInvestor)
 // ==========================================
 const SueldoEngineView = ({ setActiveTab }) => {
   const {
@@ -1200,7 +1346,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
 
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   
-  // Sincronizar importes de ingresos
   const [incomes, setIncomes] = useState(() => {
     const init = {};
     (data.fuentesIngreso || []).forEach(f => {
@@ -1224,8 +1369,11 @@ const SueldoEngineView = ({ setActiveTab }) => {
   const [irpfPct, setIrpfPct] = useState(data.config?.repartoSueldo?.irpf || 0.18);
   const [ahorroPct, setAhorroPct] = useState(data.config?.repartoSueldo?.ahorro || 0.50);
   const [gastoPct, setGastoPct] = useState(data.config?.repartoSueldo?.gasto || 0.32);
-  const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
+  
+  // Inversión mensual flexible (100, 200, 300 o personalizada)
+  const [inversionAmount, setInversionAmount] = useState(data.config?.inversionFija || 200.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
+  const [cuentaInversion, setCuentaInversion] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
 
   const [distributionResult, setDistributionResult] = useState(null);
   const [notificationMsg, setNotificationMsg] = useState('');
@@ -1244,8 +1392,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
   const [newFixedExpCategory, setNewFixedExpCategory] = useState('Suscripciones');
   const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-santander');
   const [newFixedExpAmt, setNewFixedExpAmt] = useState('');
-  
-  // Estado para cuentas e importes dinámicos de cada tarjeta de gasto fijo
   const [fixedExpSelections, setFixedExpSelections] = useState({});
 
   // 3. Gestión de Ingresos Fijos / Beneficios
@@ -1255,8 +1401,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
   const [newFixedIncAccount, setNewFixedIncAccount] = useState('acc-bbva');
   const [newFixedIncAmt, setNewFixedIncAmt] = useState('');
   const [newFixedIncIsVariable, setNewFixedIncIsVariable] = useState(false);
-
-  // Estado para importes y cuentas de ingresos fijos (como Sabadell remunerada editable)
   const [fixedIncSelections, setFixedIncSelections] = useState({});
 
   const totalIngresoCalculado = useMemo(() => {
@@ -1266,11 +1410,12 @@ const SueldoEngineView = ({ setActiveTab }) => {
   const preview = useMemo(() => {
     const irpf = Math.round(totalIngresoCalculado * irpfPct * 100) / 100;
     const ahorro = Math.round(totalIngresoCalculado * ahorroPct * 100) / 100;
-    const inv = Math.min(totalIngresoCalculado, inversionFija || 60.00);
+    const numInv = parseFloat(inversionAmount) || 0;
+    const inv = Math.min(totalIngresoCalculado, numInv);
     const gasto = Math.max(0, Math.round((totalIngresoCalculado - irpf - ahorro - inv) * 100) / 100);
 
     return { irpf, ahorro, inv, gasto };
-  }, [totalIngresoCalculado, irpfPct, ahorroPct, inversionFija]);
+  }, [totalIngresoCalculado, irpfPct, ahorroPct, inversionAmount]);
 
   const handleIncomeChange = (fuenteId, val) => {
     setIncomes(prev => ({ ...prev, [fuenteId]: val }));
@@ -1289,8 +1434,9 @@ const SueldoEngineView = ({ setActiveTab }) => {
       irpfPct,
       ahorroPct,
       gastoPct,
-      inversionFija,
-      cuentaIngreso
+      inversionAmount: parseFloat(inversionAmount) || 0,
+      cuentaIngreso,
+      cuentaInversion
     });
 
     if (result) {
@@ -1302,7 +1448,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
     }
   };
 
-  // Registrar Gasto Fijo con cuenta e importe seleccionables
   const handleQuickRegisterFixedExpense = (gf, index) => {
     const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-santander';
     const rawAmt = fixedExpSelections[gf.id || index]?.importe;
@@ -1327,7 +1472,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
     setTimeout(() => setNotificationMsg(''), 4000);
   };
 
-  // Registrar Ingreso Fijo / Beneficio con cuenta e importe seleccionables
   const handleQuickRegisterFixedIncome = (inc, index) => {
     const selectedAcc = fixedIncSelections[inc.id || index]?.cuenta || inc.cuenta || 'acc-bbva';
     const rawAmt = fixedIncSelections[inc.id || index]?.importe;
@@ -1359,11 +1503,11 @@ const SueldoEngineView = ({ setActiveTab }) => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 mb-2">
             <Icon name="zap" className="w-3.5 h-3.5 text-amber-600" />
-            Automatización de Nóminas & Finanzas Recurrentes
+            Automatización de Nóminas, Reparto & Inversión
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas, Gastos & Beneficios</h2>
+          <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas & Inversión Flexible</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gestiona tus trabajos, gastos fijos y beneficios bancarios bajo demanda con selección de cuenta.
+            Aporta a MyInvestor según tus ingresos mensuales (100€, 200€, 300€...) y gestiona gastos fijos.
           </p>
         </div>
 
@@ -1414,8 +1558,8 @@ const SueldoEngineView = ({ setActiveTab }) => {
               <span className="font-bold text-sky-700">{formatCurrency(distributionResult.preview.ahorro)}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Trade Republic</span>
-              <span className="font-bold text-zinc-900">{formatCurrency(distributionResult.preview.inv)}</span>
+              <span className="text-slate-400 block">Inversión (MyInvestor)</span>
+              <span className="font-bold text-purple-800">{formatCurrency(distributionResult.preview.inv)}</span>
             </div>
           </div>
         </div>
@@ -1581,7 +1725,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">Cuenta de ingreso:</span>
+            <span className="text-xs text-slate-500 font-medium">Cuenta donde se cobra:</span>
             <select
               value={cuentaIngreso}
               onChange={(e) => setCuentaIngreso(e.target.value)}
@@ -1594,8 +1738,8 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </div>
         </div>
 
-        {/* Previsualización en Vivo */}
-        <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between space-y-4">
+        {/* Previsualización en Vivo y Ajuste de Inversión */}
+        <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-850 text-white p-6 rounded-3xl shadow-md flex flex-col justify-between space-y-4">
           <div>
             <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
               2. Previsualización del Reparto
@@ -1603,7 +1747,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
             <div className="text-3xl font-extrabold mt-1 text-white font-sans">
               {formatCurrency(totalIngresoCalculado)}
             </div>
-            <p className="text-xs text-slate-400">Total a distribuir</p>
+            <p className="text-xs text-slate-400">Total nóminas a distribuir</p>
 
             <div className="mt-5 space-y-2.5 text-xs">
               <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10">
@@ -1622,18 +1766,49 @@ const SueldoEngineView = ({ setActiveTab }) => {
                 <span className="font-bold text-sky-300 font-sans">{formatCurrency(preview.ahorro)}</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-300"></span>
-                  Trade Republic (Fijo)
-                </span>
-                <span className="font-bold text-white font-sans">{formatCurrency(preview.inv)}</span>
+              {/* Inversión Variable en MyInvestor */}
+              <div className="p-3 bg-purple-950/60 rounded-2xl border border-purple-400/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-bold text-purple-200">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                    Aportación a MyInvestor
+                  </span>
+                  <span className="font-extrabold text-purple-200 font-sans text-sm">{formatCurrency(preview.inv)}</span>
+                </div>
+
+                {/* Botones de Selección Rápida 100, 200, 300 € */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  {[100, 200, 300].map(amt => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setInversionAmount(amt)}
+                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
+                        parseFloat(inversionAmount) === amt
+                          ? 'bg-purple-500 text-white shadow-sm'
+                          : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                      }`}
+                    >
+                      {amt} €
+                    </button>
+                  ))}
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="10"
+                      placeholder="Otro €"
+                      value={inversionAmount}
+                      onChange={(e) => setInversionAmount(e.target.value)}
+                      className="w-full py-1 px-2 text-xs font-bold text-right bg-white/10 border border-purple-400/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-2.5 bg-white/10 rounded-xl border border-white/20">
                 <span className="flex items-center gap-2 font-bold text-amber-300">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  Disponible Gastos ({Math.round(gastoPct * 100)}%)
+                  Disponible Gastos
                 </span>
                 <span className="font-bold text-amber-300 font-sans">{formatCurrency(preview.gasto)}</span>
               </div>
@@ -1660,7 +1835,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
               Gastos Fijos & Suscripciones (Activar cuando se cobren)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Elige la cuenta bancaria de cargo y pulsa "Registrar Pago" el día que te pasen el recibo.
+              Elige la cuenta bancaria de cargo y pulsa "Pagar" el día que te pasen el recibo.
             </p>
           </div>
 
@@ -1914,7 +2089,6 @@ const SueldoEngineView = ({ setActiveTab }) => {
             const currentSelection = fixedIncSelections[inc.id || idx] || {};
             const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
             const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : (inc.isVariable ? '' : inc.importe);
-            const accObj = (data.cuentas || []).find(c => c.id === currentAcc);
 
             return (
               <div key={inc.id || idx} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3">
@@ -1981,7 +2155,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS (Modificación 2)
+// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS
 // ==========================================
 const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) => {
   const { data, deleteMovimiento } = useFinance();
@@ -1994,8 +2168,7 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
-  // Modificación: Vista Lista Detallada vs Vista Compacta por Fechas (Plegada por defecto)
-  const [viewMode, setViewMode] = useState('compactByDate'); // 'compactByDate' | 'detailed'
+  const [viewMode, setViewMode] = useState('compactByDate');
   const [expandedDates, setExpandedDates] = useState(() => ({}));
 
   const toggleDateExpand = (dateKey) => {
@@ -2034,7 +2207,13 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
         if (m.tipo === 'ingreso' && m.cuentaDestino !== selectedAccount) return false;
         if (m.tipo === 'transferencia' && m.cuentaOrigen !== selectedAccount && m.cuentaDestino !== selectedAccount) return false;
       }
-      if (selectedCategory !== 'todas' && m.categoria !== selectedCategory) return false;
+      if (selectedCategory !== 'todas') {
+        if (m.tipo === 'transferencia') {
+          if (selectedCategory !== 'Transferencia' && m.categoria !== selectedCategory) return false;
+        } else if (m.categoria !== selectedCategory) {
+          return false;
+        }
+      }
       if (selectedMonth !== 'todos' && (!m.fecha || !m.fecha.startsWith(selectedMonth))) return false;
 
       if (search.trim()) {
@@ -2061,7 +2240,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
     return { gastos, ingresos, balance: ingresos - gastos };
   }, [filteredMovimientos]);
 
-  // Agrupación por fecha
   const groupedByDate = useMemo(() => {
     const map = {};
     filteredMovimientos.forEach(m => {
@@ -2167,7 +2345,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
               <strong>{filteredMovimientos.length}</strong> movimientos en <strong>{groupedByDate.length}</strong> días
             </span>
 
-            {/* Alternador de Vista (Modificación 2) */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-xl ml-2">
               <button
                 onClick={() => setViewMode('compactByDate')}
@@ -2231,11 +2408,10 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
             </div>
           ) : (
             groupedByDate.map(group => {
-              const isExpanded = !!expandedDates[group.fecha]; // Plegado por defecto
+              const isExpanded = !!expandedDates[group.fecha];
 
               return (
                 <div key={group.fecha} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all">
-                  {/* Cabecera del Día (Acordeón) */}
                   <div
                     onClick={() => toggleDateExpand(group.fecha)}
                     className="p-4 bg-slate-50/70 hover:bg-slate-100/70 transition-colors flex items-center justify-between cursor-pointer select-none"
@@ -2272,7 +2448,6 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
                     </div>
                   </div>
 
-                  {/* Movimientos del Día */}
                   {isExpanded && (
                     <div className="divide-y divide-slate-100 border-t border-slate-100">
                       {group.movimientos.map(m => {
@@ -2708,7 +2883,7 @@ const AnaliticaView = () => {
           <td class="num">${saldoIni.toFixed(2)} €</td>
           <td class="num">${movNeto.toFixed(2)} €</td>
           <td class="num bold">${saldoAct.toFixed(2)} €</td>
-          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : 'Sabadell IRPF (Separado)'}</td>
+          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : (c.tipo === 'inversion' ? 'Cartera Inversión' : 'Sabadell IRPF (Separado)')}</td>
         </tr>
       `;
     });
@@ -2883,7 +3058,7 @@ const AnaliticaView = () => {
               {showIrpfInChart ? 'Evolución del Patrimonio Total Consolidado (€)' : 'Evolución del Patrimonio Neto Disponible (€)'}
             </h3>
             <p className="text-xs text-slate-500">
-              {showIrpfInChart ? 'Incluye todas las cuentas activas (con Sabadell IRPF)' : 'Solo cuentas computables en el total (excluye Sabadell IRPF)'}
+              {showIrpfInChart ? 'Incluye todas las cuentas activas (con Inversión e IRPF)' : 'Solo cuentas líquidas operativas (excluye Inversiones y Sabadell IRPF)'}
             </p>
           </div>
 
@@ -2895,7 +3070,7 @@ const AnaliticaView = () => {
                   !showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Sin IRPF
+                Solo Líquido
               </button>
               <button
                 onClick={() => setShowIrpfInChart(true)}
@@ -2903,7 +3078,7 @@ const AnaliticaView = () => {
                   showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Con IRPF
+                Consolidado
               </button>
             </div>
 
@@ -3031,7 +3206,7 @@ const AnaliticaView = () => {
                   Conclusión del Período
                 </span>
                 <p className="text-xs text-blue-950 leading-relaxed">
-                  Durante el período seleccionado has ingresado un total de <strong>{formatCurrency(periodKpis.ingresos)}</strong> y realizado gastos por <strong>{formatCurrency(periodKpis.gastos)}</strong>, lo que representa una tasa de ahorro del <strong>{periodKpis.tasaAhorro}%</strong> ({formatCurrency(periodKpis.balance)} guardados). Tu patrimonio neto disponible se sitúa en <strong>{formatCurrency(totalPatrimonio)}</strong>.
+                  Durante el período seleccionado has ingresado un total de <strong>{formatCurrency(periodKpis.ingresos)}</strong> y realizado gastos por <strong>{formatCurrency(periodKpis.gastos)}</strong>, lo que representa una tasa de ahorro del <strong>{periodKpis.tasaAhorro}%</strong> ({formatCurrency(periodKpis.balance)} guardados). Tu patrimonio líquido disponible se sitúa en <strong>{formatCurrency(totalPatrimonio)}</strong>.
                 </p>
               </div>
 
@@ -3116,7 +3291,8 @@ const AjustesView = () => {
   const [irpf, setIrpf] = useState((data.config?.repartoSueldo?.irpf || 0.18) * 100);
   const [ahorro, setAhorro] = useState((data.config?.repartoSueldo?.ahorro || 0.50) * 100);
   const [gasto, setGasto] = useState((data.config?.repartoSueldo?.gasto || 0.32) * 100);
-  const [invFija, setInvFija] = useState(data.config?.inversionFija || 60.00);
+  const [invFija, setInvFija] = useState(data.config?.inversionFija || 200.00);
+  const [cuentaInvDefecto, setCuentaInvDefecto] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
   const [statusMsg, setStatusMsg] = useState('');
 
   const handleSaveFirebase = (e) => {
@@ -3140,9 +3316,10 @@ const AjustesView = () => {
         ahorro: parseFloat(ahorro) / 100,
         gasto: parseFloat(gasto) / 100
       },
-      inversionFija: parseFloat(invFija) || 60.00
+      inversionFija: parseFloat(invFija) || 200.00,
+      cuentaInversionDefecto: cuentaInvDefecto
     });
-    setStatusMsg('Configuración de reparto de sueldo guardada.');
+    setStatusMsg('Configuración de reparto de sueldo e inversión guardada.');
   };
 
   const handleExportJson = () => {
@@ -3237,7 +3414,7 @@ const AjustesView = () => {
         <div>
           <h3 className="text-sm font-bold text-slate-900">Gestión de Cuentas & Cómputo de Total</h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Configura la visibilidad de cada cuenta y si suma al Patrimonio Neto Disponible.
+            Configura la visibilidad de cada cuenta y si suma al Patrimonio Líquido Disponible.
           </p>
         </div>
 
@@ -3248,7 +3425,7 @@ const AjustesView = () => {
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }}></span>
                 <div>
                   <span className="text-xs font-bold text-slate-900 block">{c.nombre}</span>
-                  <span className="text-[10px] text-slate-400 capitalize">{c.tipo}</span>
+                  <span className="text-[10px] text-slate-400 capitalize">{c.tipo === 'inversion' ? 'Inversión' : c.tipo}</span>
                 </div>
               </div>
 
@@ -3279,11 +3456,11 @@ const AjustesView = () => {
         </div>
       </div>
 
-      {/* Configuración de Reparto de Nóminas */}
+      {/* Configuración de Reparto de Nóminas & Inversión */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <Icon name="zap" className="w-4 h-4 text-amber-500" />
-          Porcentajes del Reparto de Sueldo
+          Porcentajes de Reparto & Inversión
         </h3>
 
         <form onSubmit={handleSavePercentages} className="space-y-4">
@@ -3320,15 +3497,29 @@ const AjustesView = () => {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Inversión Fija Mensual (Trade Republic €)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={invFija}
-              onChange={(e) => setInvFija(e.target.value)}
-              className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Cuenta de Inversión Habitual</label>
+              <select
+                value={cuentaInvDefecto}
+                onChange={(e) => setCuentaInvDefecto(e.target.value)}
+                className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+              >
+                {(data.cuentas || []).filter(c => c && c.activa && c.tipo === 'inversion').map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Aportación Habitual de Inversión (€)</label>
+              <input
+                type="number"
+                step="10"
+                value={invFija}
+                onChange={(e) => setInvFija(e.target.value)}
+                className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end">
@@ -3336,7 +3527,7 @@ const AjustesView = () => {
               type="submit"
               className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
             >
-              Guardar Porcentajes
+              Guardar Configuración
             </button>
           </div>
         </form>
@@ -3382,7 +3573,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [importe, setImporte] = useState('');
   const [cuentaOrigen, setCuentaOrigen] = useState('acc-santander');
-  const [cuentaDestino, setCuentaDestino] = useState('acc-bbva');
+  const [cuentaDestino, setCuentaDestino] = useState('acc-myinvestor');
   const [categoria, setCategoria] = useState('Comida');
   const [comentario, setComentario] = useState('');
 
@@ -3393,7 +3584,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
       setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
       setImporte(editingMovement.importe?.toString() || '');
       setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
-      setCuentaDestino(editingMovement.cuentaDestino || 'acc-bbva');
+      setCuentaDestino(editingMovement.cuentaDestino || 'acc-myinvestor');
       setCategoria(mTipo === 'transferencia' ? 'Transferencia' : (editingMovement.categoria || 'Comida'));
       setComentario(editingMovement.comentario || '');
     } else {
@@ -3401,7 +3592,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
       setFecha(new Date().toISOString().split('T')[0]);
       setImporte('');
       setCuentaOrigen('acc-santander');
-      setCuentaDestino('acc-bbva');
+      setCuentaDestino(defaultType === 'transferencia' ? 'acc-myinvestor' : 'acc-bbva');
       setCategoria(defaultType === 'transferencia' ? 'Transferencia' : defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
       setComentario('');
     }
@@ -3575,7 +3766,7 @@ const MovementModal = ({ isOpen, onClose, editingMovement = null, defaultType = 
             <label className="text-xs font-bold text-slate-700 block mb-1">Comentario / Nota (Opcional)</label>
             <input
               type="text"
-              placeholder="ej. Mercadona, Restaurante, Regalo..."
+              placeholder="ej. Aportación inversión, Mercadona..."
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"

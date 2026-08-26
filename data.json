@@ -133,7 +133,7 @@
       "tipo": "ingreso"
     }
   ],
-  "clientUpdated": "2026-08-26T07:40:20.117Z",
+  "clientUpdated": "2026-08-26T21:23:54.416Z",
   "config": {
     "gastosFijosDefecto": [
       {
@@ -153,6 +153,20 @@
         "cuenta": "acc-santander",
         "importe": 24.99,
         "nombre": "Basic Fit"
+      },
+      {
+        "categoria": "Alquiler",
+        "cuenta": "acc-santander",
+        "id": "gf-1787748810418",
+        "importe": 20,
+        "nombre": "Limpieza Casa"
+      },
+      {
+        "categoria": "Cuenta compartida",
+        "cuenta": "acc-santander",
+        "id": "gf-1787754116564",
+        "importe": 50,
+        "nombre": "Cuenta Revolut con Carmen"
       }
     ],
     "ingresosFijosDefecto": [
@@ -173,12 +187,13 @@
         "nombre": "Intereses Sabadell Remunerada"
       }
     ],
-    "inversionFija": 60,
+    "inversionFija": 200.0,
     "repartoSueldo": {
       "ahorro": 0.5,
       "gasto": 0.32,
       "irpf": 0.18
-    }
+    },
+    "cuentaInversionDefecto": "acc-myinvestor"
   },
   "cuentas": [
     {
@@ -221,7 +236,7 @@
       "activa": true,
       "color": "#18181B",
       "id": "acc-trade",
-      "incluirEnTotal": true,
+      "incluirEnTotal": false,
       "nombre": "Trade Republic",
       "saldoInicial": -313.25,
       "tipo": "inversion"
@@ -234,6 +249,15 @@
       "nombre": "Efectivo",
       "saldoInicial": 810,
       "tipo": "metalico"
+    },
+    {
+      "id": "acc-myinvestor",
+      "nombre": "MyInvestor",
+      "tipo": "inversion",
+      "activa": true,
+      "incluirEnTotal": false,
+      "color": "#8B5CF6",
+      "saldoInicial": 0.0
     }
   ],
   "fuentesIngreso": [
@@ -259,6 +283,26 @@
     }
   ],
   "movimientos": [
+    {
+      "id": "mov-1787779785565",
+      "fecha": "2026-08-26",
+      "tipo": "transferencia",
+      "cuentaOrigen": "acc-sab-ahorro",
+      "cuentaDestino": "acc-myinvestor",
+      "importe": 200.0,
+      "categoria": "Inversiones",
+      "comentario": "Aportación a MyInvestor desde Sabadell"
+    },
+    {
+      "categoria": "Comida",
+      "comentario": "Mercadona",
+      "cuentaDestino": "",
+      "cuentaOrigen": "acc-bbva",
+      "fecha": "2026-08-26",
+      "id": "mov-1787741488589",
+      "importe": 5.3,
+      "tipo": "gasto"
+    },
     {
       "categoria": "Suscripciones",
       "comentario": "Basic Fit",

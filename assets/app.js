@@ -357,6 +357,11 @@ const getAccountBadge = (accId, cuentas = []) => {
         ...acc,
         bgClass: 'bg-zinc-100 text-zinc-900 border-zinc-300'
       };
+    case 'acc-myinvestor':
+      return {
+        ...acc,
+        bgClass: 'bg-purple-50 text-purple-700 border-purple-200'
+      };
     case 'acc-efectivo':
       return {
         ...acc,
@@ -378,7 +383,7 @@ const STORAGE_KEY = 'finanzas_data_v1';
 const FIREBASE_URL_KEY = 'finanzas_firebase_url';
 const DEFAULT_FIREBASE_URL = 'https://nutriplan-2c75e-default-rtdb.europe-west1.firebasedatabase.app/finanzas.json';
 const defaultFallbackData = {
-  version: '1.3',
+  version: '1.4',
   clientUpdated: new Date().toISOString(),
   config: {
     repartoSueldo: {
@@ -386,7 +391,8 @@ const defaultFallbackData = {
       ahorro: 0.50,
       gasto: 0.32
     },
-    inversionFija: 60.00,
+    inversionFija: 200.00,
+    cuentaInversionDefecto: 'acc-myinvestor',
     gastosFijosDefecto: [{
       id: 'gf-1',
       nombre: 'Alquiler + Gastos Casa',
@@ -465,9 +471,17 @@ const defaultFallbackData = {
     nombre: 'Trade Republic',
     tipo: 'inversion',
     activa: true,
-    incluirEnTotal: true,
+    incluirEnTotal: false,
     color: '#18181B',
     saldoInicial: -313.25
+  }, {
+    id: 'acc-myinvestor',
+    nombre: 'MyInvestor',
+    tipo: 'inversion',
+    activa: true,
+    incluirEnTotal: false,
+    color: '#8B5CF6',
+    saldoInicial: 0.00
   }, {
     id: 'acc-efectivo',
     nombre: 'Efectivo',
@@ -614,9 +628,23 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     if (val && typeof val === 'object') return Object.values(val).filter(Boolean);
     return def;
   };
-  const cuentas = toCleanArray(input.cuentas, fallback.cuentas).map(c => ({
+  const rawCuentas = toCleanArray(input.cuentas, fallback.cuentas);
+  // Ensure acc-myinvestor exists
+  const hasMyInvestor = rawCuentas.some(c => c && c.id === 'acc-myinvestor');
+  if (!hasMyInvestor) {
+    rawCuentas.push({
+      id: 'acc-myinvestor',
+      nombre: 'MyInvestor',
+      tipo: 'inversion',
+      activa: true,
+      incluirEnTotal: false,
+      color: '#8B5CF6',
+      saldoInicial: 0.00
+    });
+  }
+  const cuentas = rawCuentas.map(c => ({
     ...c,
-    incluirEnTotal: c.id === 'acc-sab-irpf' ? c.incluirEnTotal === true : c.incluirEnTotal !== false
+    incluirEnTotal: ['acc-sab-irpf', 'acc-trade', 'acc-myinvestor'].includes(c.id) ? c.incluirEnTotal === true : c.incluirEnTotal !== false
   }));
   const categorias = toCleanArray(input.categorias, fallback.categorias);
   const fuentesIngreso = toCleanArray(input.fuentesIngreso, fallback.fuentesIngreso);
@@ -630,7 +658,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     return (b.id || '').localeCompare(a.id || '');
   });
   return {
-    version: input.version || '1.3',
+    version: input.version || '1.4',
     clientUpdated: input.clientUpdated || new Date().toISOString(),
     config: {
       repartoSueldo: {
@@ -639,6 +667,7 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
         gasto: input.config?.repartoSueldo?.gasto !== undefined ? input.config.repartoSueldo.gasto : fallback.config.repartoSueldo.gasto
       },
       inversionFija: input.config?.inversionFija !== undefined ? input.config.inversionFija : fallback.config.inversionFija,
+      cuentaInversionDefecto: input.config?.cuentaInversionDefecto || fallback.config.cuentaInversionDefecto || 'acc-myinvestor',
       gastosFijosDefecto: toCleanArray(input.config?.gastosFijosDefecto, fallback.config.gastosFijosDefecto),
       ingresosFijosDefecto: toCleanArray(input.config?.ingresosFijosDefecto, fallback.config.ingresosFijosDefecto)
     },
@@ -806,7 +835,7 @@ const FinanceProvider = ({
       cuentaOrigen: mov.cuentaOrigen || '',
       cuentaDestino: mov.cuentaDestino || '',
       importe: Math.abs(parseFloat(mov.importe) || 0),
-      categoria: mov.categoria || '',
+      categoria: mov.tipo === 'transferencia' ? 'Transferencia' : mov.categoria || 'General',
       comentario: mov.comentario || ''
     };
     updateAndSyncData(prev => ({
@@ -949,14 +978,15 @@ const FinanceProvider = ({
     irpfPct,
     ahorroPct,
     gastoPct,
-    inversionFija,
-    cuentaIngreso = 'acc-santander'
+    inversionAmount,
+    cuentaIngreso = 'acc-santander',
+    cuentaInversion = 'acc-myinvestor'
   }) => {
     const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
     if (totalIngreso <= 0) return false;
     const irpfAmount = Math.round(totalIngreso * (irpfPct || 0.18) * 100) / 100;
     const ahorroAmount = Math.round(totalIngreso * (ahorroPct || 0.50) * 100) / 100;
-    const invAmount = Math.round((inversionFija !== undefined ? inversionFija : 60.00) * 100) / 100;
+    const invAmount = Math.round((inversionAmount !== undefined ? inversionAmount : 200.00) * 100) / 100;
     const newMovs = [];
     const timestamp = Date.now();
     Object.entries(incomes).forEach(([fuenteId, amount], idx) => {
@@ -1000,15 +1030,18 @@ const FinanceProvider = ({
       });
     }
     if (invAmount > 0) {
+      const targetAcc = cuentaInversion || 'acc-myinvestor';
+      const targetAccObj = (data.cuentas || []).find(c => c.id === targetAcc);
+      const targetAccName = targetAccObj ? targetAccObj.nombre : 'MyInvestor';
       newMovs.push({
         id: `mov-${timestamp + 300}`,
         fecha: fecha,
         tipo: 'transferencia',
         cuentaOrigen: cuentaIngreso,
-        cuentaDestino: 'acc-trade',
+        cuentaDestino: targetAcc,
         importe: invAmount,
         categoria: 'Inversiones',
-        comentario: 'Inversión mensual fija'
+        comentario: `Aportación mensual a ${targetAccName}`
       });
     }
     updateAndSyncData(prev => ({
@@ -1019,7 +1052,8 @@ const FinanceProvider = ({
       totalIngreso,
       irpfAmount,
       ahorroAmount,
-      invAmount
+      invAmount,
+      cuentaInversion
     };
   };
   const updateConfig = newConfig => {
@@ -1093,19 +1127,27 @@ const FinanceProvider = ({
   const totalPatrimonioDisponible = useMemo(() => {
     return (data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
+  const totalInversionConjunta = useMemo(() => {
+    return (data.cuentas || []).filter(c => c && c.activa && (c.tipo === 'inversion' || c.id === 'acc-trade' || c.id === 'acc-myinvestor')).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
+  }, [data.cuentas, saldos]);
   const totalPatrimonioAbsoluto = useMemo(() => {
     return (data.cuentas || []).filter(c => c && c.activa).reduce((sum, c) => sum + (saldos[c.id] || 0), 0);
   }, [data.cuentas, saldos]);
   const saldoIrpfSeparado = useMemo(() => {
     return saldos['acc-sab-irpf'] || 0;
   }, [saldos]);
+  const saldoTradeRepublic = useMemo(() => saldos['acc-trade'] || 0, [saldos]);
+  const saldoMyInvestor = useMemo(() => saldos['acc-myinvestor'] || 0, [saldos]);
   return /*#__PURE__*/React.createElement(FinanceContext.Provider, {
     value: {
       data,
       saldos,
       totalPatrimonio: totalPatrimonioDisponible,
+      totalInversion: totalInversionConjunta,
       totalPatrimonioAbsoluto,
       saldoIrpfSeparado,
+      saldoTradeRepublic,
+      saldoMyInvestor,
       syncStatus,
       lastSyncTime,
       firebaseUrl,
@@ -1188,7 +1230,7 @@ const Navbar = ({
     className: "text-base font-bold tracking-tight text-slate-900 leading-tight"
   }, "Finanzas 2026"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 font-medium"
-  }, "Patrimonio & Reparto"))), /*#__PURE__*/React.createElement("nav", {
+  }, "Patrimonio & Inversión"))), /*#__PURE__*/React.createElement("nav", {
     className: "hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60"
   }, [{
     id: 'dashboard',
@@ -1301,7 +1343,7 @@ const BottomNav = ({
 };
 
 // ==========================================
-// 📊 DASHBOARD PRINCIPAL
+// 📊 DASHBOARD PRINCIPAL CON BLOQUE DE INVERSIÓN
 // ==========================================
 const DashboardView = ({
   setActiveTab,
@@ -1312,8 +1354,11 @@ const DashboardView = ({
     data,
     saldos,
     totalPatrimonio,
+    totalInversion,
     totalPatrimonioAbsoluto,
-    saldoIrpfSeparado
+    saldoIrpfSeparado,
+    saldoTradeRepublic,
+    saldoMyInvestor
   } = useFinance();
   const currentMonthStats = useMemo(() => {
     const now = new Date();
@@ -1346,24 +1391,28 @@ const DashboardView = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"
+    className: "absolute bottom-0 left-1/3 -mb-16 w-48 h-48 rounded-full bg-purple-500/10 blur-2xl pointer-events-none"
   }), /*#__PURE__*/React.createElement("div", {
     className: "relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"
-  }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Neto Disponible"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "Patrimonio Líquido Disponible"), /*#__PURE__*/React.createElement("span", {
     className: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200"
-  }, (data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).length, " Cuentas Computables")), /*#__PURE__*/React.createElement("div", {
+  }, (data.cuentas || []).filter(c => c && c.activa && c.incluirEnTotal !== false).length, " Cuentas Operativas")), /*#__PURE__*/React.createElement("div", {
     className: "text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white font-sans"
   }, formatCurrency(totalPatrimonio)), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2.5 flex flex-wrap items-center gap-2"
+    className: "mt-3 flex flex-wrap items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-purple-950/70 border border-purple-500/40 text-purple-200 font-semibold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full bg-purple-400"
+  }), "Inversión (Separada): ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(totalInversion))), /*#__PURE__*/React.createElement("span", {
     className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-cyan-950/60 border border-cyan-500/30 text-cyan-200"
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-2 h-2 rounded-full bg-cyan-400"
-  }), "Sabadell IRPF (Separado): ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(saldoIrpfSeparado))), /*#__PURE__*/React.createElement("span", {
+  }), "Sabadell IRPF: ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(saldoIrpfSeparado))), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
-  }, "• Total con IRPF: ", /*#__PURE__*/React.createElement("strong", {
+  }, "• Total Consolidado: ", /*#__PURE__*/React.createElement("strong", {
     className: "text-slate-200 font-sans"
   }, formatCurrency(totalPatrimonioAbsoluto))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-sm"
@@ -1411,7 +1460,72 @@ const DashboardView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-slate-950"
-  }), "Motor Sueldo & Fijos"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), "Motor Sueldo & Inversión"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 text-white p-6 rounded-3xl border border-purple-800/30 shadow-lg relative overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute right-0 top-0 -mt-8 -mr-8 w-48 h-48 rounded-full bg-purple-500/10 blur-2xl pointer-events-none"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-200 border border-purple-400/30 mb-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trendingUp",
+    className: "w-3.5 h-3.5 text-purple-300"
+  }), "Bloque de Inversión Conjunta (No suma al gasto corriente)"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-bold text-white"
+  }, "Cartera de Inversión"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-300"
+  }, "Fondo conjunto en MyInvestor y Trade Republic")), /*#__PURE__*/React.createElement("div", {
+    className: "text-left sm:text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-purple-300 uppercase tracking-wider font-semibold block"
+  }, "Total Invertido"), /*#__PURE__*/React.createElement("div", {
+    className: "text-2xl sm:text-3xl font-extrabold text-purple-200 font-sans"
+  }, formatCurrency(totalInversion)))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: () => onSelectAccountFilter('acc-myinvestor'),
+    className: "bg-white/10 hover:bg-white/15 border border-purple-400/20 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3.5 h-3.5 rounded-full bg-purple-500 ring-4 ring-purple-500/20"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-white group-hover:text-purple-300 transition-colors"
+  }, "MyInvestor"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-purple-200 font-medium"
+  }, "Aportaciones activas mensuales"))), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30"
+  }, "Principal")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-purple-200 font-medium"
+  }, "Saldo acumulado"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xl font-extrabold text-white font-sans"
+  }, formatCurrency(saldoMyInvestor)))), /*#__PURE__*/React.createElement("div", {
+    onClick: () => onSelectAccountFilter('acc-trade'),
+    className: "bg-white/5 hover:bg-white/10 border border-white/10 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3.5 h-3.5 rounded-full bg-zinc-400 ring-4 ring-white/10"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-white group-hover:text-zinc-300 transition-colors"
+  }, "Trade Republic"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400 font-medium"
+  }, "Fondo consolidado (sin nuevas aportaciones)"))), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-300"
+  }, "Mantenido")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400 font-medium"
+  }, "Saldo disponible"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xl font-extrabold text-slate-200 font-sans"
+  }, formatCurrency(saldoTradeRepublic)))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 px-1"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-bold text-slate-900"
@@ -1422,7 +1536,7 @@ const DashboardView = ({
   }, (data.cuentas || []).filter(c => c && c.activa).map(c => {
     const saldo = saldos[c.id] || 0;
     const badge = getAccountBadge(c.id, data.cuentas);
-    const isIrpfExcluded = c.incluirEnTotal === false;
+    const isExcluded = c.incluirEnTotal === false;
     return /*#__PURE__*/React.createElement("div", {
       key: c.id,
       onClick: () => onSelectAccountFilter(c.id),
@@ -1440,15 +1554,15 @@ const DashboardView = ({
       className: "text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors"
     }, c.nombre), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-medium text-slate-400 capitalize"
-    }, c.tipo))), isIrpfExcluded ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200"
-    }, "No suma al total") : /*#__PURE__*/React.createElement("span", {
+    }, c.tipo === 'inversion' ? 'Inversión' : c.tipo))), isExcluded ? /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge.bgClass}`
+    }, c.tipo === 'inversion' ? 'Bloque Inversión' : 'No suma al total') : /*#__PURE__*/React.createElement("span", {
       className: `text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.bgClass}`
     }, totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0, "%")), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-xs text-slate-400 font-medium"
-    }, "Saldo disponible"), /*#__PURE__*/React.createElement("span", {
+    }, "Saldo"), /*#__PURE__*/React.createElement("span", {
       className: `text-xl font-bold font-sans ${saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`
     }, formatCurrency(saldo))));
   }))), /*#__PURE__*/React.createElement("div", {
@@ -1501,7 +1615,7 @@ const DashboardView = ({
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & BENEFICIOS (Modificaciones 1 & 3)
+// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & INVERSIONES (MyInvestor)
 // ==========================================
 const SueldoEngineView = ({
   setActiveTab
@@ -1521,8 +1635,6 @@ const SueldoEngineView = ({
     deleteIngresoFijo
   } = useFinance();
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
-
-  // Sincronizar importes de ingresos
   const [incomes, setIncomes] = useState(() => {
     const init = {};
     (data.fuentesIngreso || []).forEach(f => {
@@ -1546,8 +1658,11 @@ const SueldoEngineView = ({
   const [irpfPct, setIrpfPct] = useState(data.config?.repartoSueldo?.irpf || 0.18);
   const [ahorroPct, setAhorroPct] = useState(data.config?.repartoSueldo?.ahorro || 0.50);
   const [gastoPct, setGastoPct] = useState(data.config?.repartoSueldo?.gasto || 0.32);
-  const [inversionFija, setInversionFija] = useState(data.config?.inversionFija || 60.00);
+
+  // Inversión mensual flexible (100, 200, 300 o personalizada)
+  const [inversionAmount, setInversionAmount] = useState(data.config?.inversionFija || 200.00);
   const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
+  const [cuentaInversion, setCuentaInversion] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
   const [distributionResult, setDistributionResult] = useState(null);
   const [notificationMsg, setNotificationMsg] = useState('');
 
@@ -1565,8 +1680,6 @@ const SueldoEngineView = ({
   const [newFixedExpCategory, setNewFixedExpCategory] = useState('Suscripciones');
   const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-santander');
   const [newFixedExpAmt, setNewFixedExpAmt] = useState('');
-
-  // Estado para cuentas e importes dinámicos de cada tarjeta de gasto fijo
   const [fixedExpSelections, setFixedExpSelections] = useState({});
 
   // 3. Gestión de Ingresos Fijos / Beneficios
@@ -1576,8 +1689,6 @@ const SueldoEngineView = ({
   const [newFixedIncAccount, setNewFixedIncAccount] = useState('acc-bbva');
   const [newFixedIncAmt, setNewFixedIncAmt] = useState('');
   const [newFixedIncIsVariable, setNewFixedIncIsVariable] = useState(false);
-
-  // Estado para importes y cuentas de ingresos fijos (como Sabadell remunerada editable)
   const [fixedIncSelections, setFixedIncSelections] = useState({});
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
@@ -1585,7 +1696,8 @@ const SueldoEngineView = ({
   const preview = useMemo(() => {
     const irpf = Math.round(totalIngresoCalculado * irpfPct * 100) / 100;
     const ahorro = Math.round(totalIngresoCalculado * ahorroPct * 100) / 100;
-    const inv = Math.min(totalIngresoCalculado, inversionFija || 60.00);
+    const numInv = parseFloat(inversionAmount) || 0;
+    const inv = Math.min(totalIngresoCalculado, numInv);
     const gasto = Math.max(0, Math.round((totalIngresoCalculado - irpf - ahorro - inv) * 100) / 100);
     return {
       irpf,
@@ -1593,7 +1705,7 @@ const SueldoEngineView = ({
       inv,
       gasto
     };
-  }, [totalIngresoCalculado, irpfPct, ahorroPct, inversionFija]);
+  }, [totalIngresoCalculado, irpfPct, ahorroPct, inversionAmount]);
   const handleIncomeChange = (fuenteId, val) => {
     setIncomes(prev => ({
       ...prev,
@@ -1612,8 +1724,9 @@ const SueldoEngineView = ({
       irpfPct,
       ahorroPct,
       gastoPct,
-      inversionFija,
-      cuentaIngreso
+      inversionAmount: parseFloat(inversionAmount) || 0,
+      cuentaIngreso,
+      cuentaInversion
     });
     if (result) {
       setDistributionResult({
@@ -1623,8 +1736,6 @@ const SueldoEngineView = ({
       });
     }
   };
-
-  // Registrar Gasto Fijo con cuenta e importe seleccionables
   const handleQuickRegisterFixedExpense = (gf, index) => {
     const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-santander';
     const rawAmt = fixedExpSelections[gf.id || index]?.importe;
@@ -1645,8 +1756,6 @@ const SueldoEngineView = ({
     setNotificationMsg(`¡Gasto registrado!: ${gf.nombre} (-${formatCurrency(finalAmt)}) en ${accName}`);
     setTimeout(() => setNotificationMsg(''), 4000);
   };
-
-  // Registrar Ingreso Fijo / Beneficio con cuenta e importe seleccionables
   const handleQuickRegisterFixedIncome = (inc, index) => {
     const selectedAcc = fixedIncSelections[inc.id || index]?.cuenta || inc.cuenta || 'acc-bbva';
     const rawAmt = fixedIncSelections[inc.id || index]?.importe;
@@ -1676,11 +1785,11 @@ const SueldoEngineView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-3.5 h-3.5 text-amber-600"
-  }), "Automatización de Nóminas & Finanzas Recurrentes"), /*#__PURE__*/React.createElement("h2", {
+  }), "Automatización de Nóminas, Reparto & Inversión"), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-bold text-slate-900"
-  }, "Motor de Nóminas, Gastos & Beneficios"), /*#__PURE__*/React.createElement("p", {
+  }, "Motor de Nóminas & Inversión Flexible"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Gestiona tus trabajos, gastos fijos y beneficios bancarios bajo demanda con selección de cuenta.")), /*#__PURE__*/React.createElement("div", {
+  }, "Aporta a MyInvestor según tus ingresos mensuales (100€, 200€, 300€...) y gestiona gastos fijos.")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
@@ -1725,8 +1834,8 @@ const SueldoEngineView = ({
     className: "font-bold text-sky-700"
   }, formatCurrency(distributionResult.preview.ahorro))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 block"
-  }, "Trade Republic"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-zinc-900"
+  }, "Inversión (MyInvestor)"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-purple-800"
   }, formatCurrency(distributionResult.preview.inv))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-12 gap-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1870,7 +1979,7 @@ const SueldoEngineView = ({
     className: "pt-3 border-t border-slate-100 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-500 font-medium"
-  }, "Cuenta de ingreso:"), /*#__PURE__*/React.createElement("select", {
+  }, "Cuenta donde se cobra:"), /*#__PURE__*/React.createElement("select", {
     value: cuentaIngreso,
     onChange: e => setCuentaIngreso(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
@@ -1878,14 +1987,14 @@ const SueldoEngineView = ({
     key: c.id,
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
-    className: "md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between space-y-4"
+    className: "md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-850 text-white p-6 rounded-3xl shadow-md flex flex-col justify-between space-y-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400 uppercase tracking-wider font-semibold"
   }, "2. Previsualización del Reparto"), /*#__PURE__*/React.createElement("div", {
     className: "text-3xl font-extrabold mt-1 text-white font-sans"
   }, formatCurrency(totalIngresoCalculado)), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Total a distribuir"), /*#__PURE__*/React.createElement("div", {
+  }, "Total nóminas a distribuir"), /*#__PURE__*/React.createElement("div", {
     className: "mt-5 space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
@@ -1904,20 +2013,38 @@ const SueldoEngineView = ({
   }), "Sabadell Ahorro (", Math.round(ahorroPct * 100), "%)"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sky-300 font-sans"
   }, formatCurrency(preview.ahorro))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10"
+    className: "p-3 bg-purple-950/60 rounded-2xl border border-purple-400/30 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 font-bold text-purple-200"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "w-2.5 h-2.5 rounded-full bg-zinc-300"
-  }), "Trade Republic (Fijo)"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-white font-sans"
+    className: "w-2.5 h-2.5 rounded-full bg-purple-400"
+  }), "Aportación a MyInvestor"), /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-purple-200 font-sans text-sm"
   }, formatCurrency(preview.inv))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 pt-1"
+  }, [100, 200, 300].map(amt => /*#__PURE__*/React.createElement("button", {
+    key: amt,
+    type: "button",
+    onClick: () => setInversionAmount(amt),
+    className: `flex-1 py-1 rounded-lg text-xs font-bold transition-all ${parseFloat(inversionAmount) === amt ? 'bg-purple-500 text-white shadow-sm' : 'bg-white/10 text-purple-200 hover:bg-white/20'}`
+  }, amt, " €")), /*#__PURE__*/React.createElement("div", {
+    className: "relative flex-1"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "10",
+    placeholder: "Otro €",
+    value: inversionAmount,
+    onChange: e => setInversionAmount(e.target.value),
+    className: "w-full py-1 px-2 text-xs font-bold text-right bg-white/10 border border-purple-400/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none"
+  })))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between p-2.5 bg-white/10 rounded-xl border border-white/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-2 font-bold text-amber-300"
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-2.5 h-2.5 rounded-full bg-amber-400"
-  }), "Disponible Gastos (", Math.round(gastoPct * 100), "%)"), /*#__PURE__*/React.createElement("span", {
+  }), "Disponible Gastos"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-amber-300 font-sans"
   }, formatCurrency(preview.gasto))))), /*#__PURE__*/React.createElement("button", {
     onClick: handleExecuteDistribution,
@@ -1937,7 +2064,7 @@ const SueldoEngineView = ({
     className: "w-4 h-4 text-rose-600"
   }), "Gastos Fijos & Suscripciones (Activar cuando se cobren)"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Elige la cuenta bancaria de cargo y pulsa \"Registrar Pago\" el día que te pasen el recibo.")), /*#__PURE__*/React.createElement("button", {
+  }, "Elige la cuenta bancaria de cargo y pulsa \"Pagar\" el día que te pasen el recibo.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsManageFixedExpOpen(!isManageFixedExpOpen),
     className: "text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
@@ -2147,7 +2274,6 @@ const SueldoEngineView = ({
     const currentSelection = fixedIncSelections[inc.id || idx] || {};
     const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
     const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : inc.isVariable ? '' : inc.importe;
-    const accObj = (data.cuentas || []).find(c => c.id === currentAcc);
     return /*#__PURE__*/React.createElement("div", {
       key: inc.id || idx,
       className: "p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3"
@@ -2205,7 +2331,7 @@ const SueldoEngineView = ({
 };
 
 // ==========================================
-// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS (Modificación 2)
+// 📖 DIARIO DE MOVIMIENTOS & VISTA COMPACTA POR FECHAS
 // ==========================================
 const MovimientosView = ({
   initialAccountFilter,
@@ -2223,9 +2349,7 @@ const MovimientosView = ({
   const [selectedMonth, setSelectedMonth] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
-
-  // Modificación: Vista Lista Detallada vs Vista Compacta por Fechas (Plegada por defecto)
-  const [viewMode, setViewMode] = useState('compactByDate'); // 'compactByDate' | 'detailed'
+  const [viewMode, setViewMode] = useState('compactByDate');
   const [expandedDates, setExpandedDates] = useState(() => ({}));
   const toggleDateExpand = dateKey => {
     setExpandedDates(prev => ({
@@ -2261,7 +2385,13 @@ const MovimientosView = ({
         if (m.tipo === 'ingreso' && m.cuentaDestino !== selectedAccount) return false;
         if (m.tipo === 'transferencia' && m.cuentaOrigen !== selectedAccount && m.cuentaDestino !== selectedAccount) return false;
       }
-      if (selectedCategory !== 'todas' && m.categoria !== selectedCategory) return false;
+      if (selectedCategory !== 'todas') {
+        if (m.tipo === 'transferencia') {
+          if (selectedCategory !== 'Transferencia' && m.categoria !== selectedCategory) return false;
+        } else if (m.categoria !== selectedCategory) {
+          return false;
+        }
+      }
       if (selectedMonth !== 'todos' && (!m.fecha || !m.fecha.startsWith(selectedMonth))) return false;
       if (search.trim()) {
         const query = search.toLowerCase();
@@ -2289,8 +2419,6 @@ const MovimientosView = ({
       balance: ingresos - gastos
     };
   }, [filteredMovimientos]);
-
-  // Agrupación por fecha
   const groupedByDate = useMemo(() => {
     const map = {};
     filteredMovimientos.forEach(m => {
@@ -2445,8 +2573,7 @@ const MovimientosView = ({
   }, "Plegar todos"))), groupedByDate.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "p-12 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200"
   }, "No se han encontrado movimientos con los filtros seleccionados.") : groupedByDate.map(group => {
-    const isExpanded = !!expandedDates[group.fecha]; // Plegado por defecto
-
+    const isExpanded = !!expandedDates[group.fecha];
     return /*#__PURE__*/React.createElement("div", {
       key: group.fecha,
       className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all"
@@ -2818,7 +2945,7 @@ const AnaliticaView = () => {
           <td class="num">${saldoIni.toFixed(2)} €</td>
           <td class="num">${movNeto.toFixed(2)} €</td>
           <td class="num bold">${saldoAct.toFixed(2)} €</td>
-          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : 'Sabadell IRPF (Separado)'}</td>
+          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : c.tipo === 'inversion' ? 'Cartera Inversión' : 'Sabadell IRPF (Separado)'}</td>
         </tr>
       `;
     });
@@ -2978,17 +3105,17 @@ const AnaliticaView = () => {
     className: "w-4 h-4 text-blue-600"
   }), showIrpfInChart ? 'Evolución del Patrimonio Total Consolidado (€)' : 'Evolución del Patrimonio Neto Disponible (€)'), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, showIrpfInChart ? 'Incluye todas las cuentas activas (con Sabadell IRPF)' : 'Solo cuentas computables en el total (excluye Sabadell IRPF)')), /*#__PURE__*/React.createElement("div", {
+  }, showIrpfInChart ? 'Incluye todas las cuentas activas (con Inversión e IRPF)' : 'Solo cuentas líquidas operativas (excluye Inversiones y Sabadell IRPF)')), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center bg-slate-100 p-1 rounded-xl text-[11px] font-bold"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowIrpfInChart(false),
     className: `px-2.5 py-1 rounded-lg transition-all ${!showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`
-  }, "Sin IRPF"), /*#__PURE__*/React.createElement("button", {
+  }, "Solo Líquido"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowIrpfInChart(true),
     className: `px-2.5 py-1 rounded-lg transition-all ${showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`
-  }, "Con IRPF")), lineChartData.points.length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, "Consolidado")), lineChartData.points.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-bold text-slate-900 font-sans"
   }, "Último: ", formatCurrency(lineChartData.points[lineChartData.points.length - 1].total)))), /*#__PURE__*/React.createElement("div", {
     className: "w-full overflow-x-auto"
@@ -3147,7 +3274,7 @@ const AnaliticaView = () => {
     className: "w-4 h-4 text-blue-600"
   }), "Conclusión del Período"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-blue-950 leading-relaxed"
-  }, "Durante el período seleccionado has ingresado un total de ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(periodKpis.ingresos)), " y realizado gastos por ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(periodKpis.gastos)), ", lo que representa una tasa de ahorro del ", /*#__PURE__*/React.createElement("strong", null, periodKpis.tasaAhorro, "%"), " (", formatCurrency(periodKpis.balance), " guardados). Tu patrimonio neto disponible se sitúa en ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(totalPatrimonio)), ".")), /*#__PURE__*/React.createElement("div", {
+  }, "Durante el período seleccionado has ingresado un total de ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(periodKpis.ingresos)), " y realizado gastos por ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(periodKpis.gastos)), ", lo que representa una tasa de ahorro del ", /*#__PURE__*/React.createElement("strong", null, periodKpis.tasaAhorro, "%"), " (", formatCurrency(periodKpis.balance), " guardados). Tu patrimonio líquido disponible se sitúa en ", /*#__PURE__*/React.createElement("strong", null, formatCurrency(totalPatrimonio)), ".")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-3 text-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-slate-50 rounded-2xl border border-slate-100"
@@ -3217,7 +3344,8 @@ const AjustesView = () => {
   const [irpf, setIrpf] = useState((data.config?.repartoSueldo?.irpf || 0.18) * 100);
   const [ahorro, setAhorro] = useState((data.config?.repartoSueldo?.ahorro || 0.50) * 100);
   const [gasto, setGasto] = useState((data.config?.repartoSueldo?.gasto || 0.32) * 100);
-  const [invFija, setInvFija] = useState(data.config?.inversionFija || 60.00);
+  const [invFija, setInvFija] = useState(data.config?.inversionFija || 200.00);
+  const [cuentaInvDefecto, setCuentaInvDefecto] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
   const [statusMsg, setStatusMsg] = useState('');
   const handleSaveFirebase = e => {
     e.preventDefault();
@@ -3238,9 +3366,10 @@ const AjustesView = () => {
         ahorro: parseFloat(ahorro) / 100,
         gasto: parseFloat(gasto) / 100
       },
-      inversionFija: parseFloat(invFija) || 60.00
+      inversionFija: parseFloat(invFija) || 200.00,
+      cuentaInversionDefecto: cuentaInvDefecto
     });
-    setStatusMsg('Configuración de reparto de sueldo guardada.');
+    setStatusMsg('Configuración de reparto de sueldo e inversión guardada.');
   };
   const handleExportJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -3323,7 +3452,7 @@ const AjustesView = () => {
     className: "text-sm font-bold text-slate-900"
   }, "Gestión de Cuentas & Cómputo de Total"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Configura la visibilidad de cada cuenta y si suma al Patrimonio Neto Disponible.")), /*#__PURE__*/React.createElement("div", {
+  }, "Configura la visibilidad de cada cuenta y si suma al Patrimonio Líquido Disponible.")), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
@@ -3339,7 +3468,7 @@ const AjustesView = () => {
     className: "text-xs font-bold text-slate-900 block"
   }, c.nombre), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-400 capitalize"
-  }, c.tipo))), /*#__PURE__*/React.createElement("div", {
+  }, c.tipo === 'inversion' ? 'Inversión' : c.tipo))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 self-end sm:self-auto"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleIncluirEnTotal(c.id),
@@ -3355,7 +3484,7 @@ const AjustesView = () => {
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-amber-500"
-  }), "Porcentajes del Reparto de Sueldo"), /*#__PURE__*/React.createElement("form", {
+  }), "Porcentajes de Reparto & Inversión"), /*#__PURE__*/React.createElement("form", {
     onSubmit: handleSavePercentages,
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -3384,20 +3513,31 @@ const AjustesView = () => {
     value: gasto,
     onChange: e => setGasto(e.target.value),
     className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "text-xs font-semibold text-slate-700 block mb-1"
-  }, "Inversión Fija Mensual (Trade Republic €)"), /*#__PURE__*/React.createElement("input", {
+  }, "Cuenta de Inversión Habitual"), /*#__PURE__*/React.createElement("select", {
+    value: cuentaInvDefecto,
+    onChange: e => setCuentaInvDefecto(e.target.value),
+    className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
+  }, (data.cuentas || []).filter(c => c && c.activa && c.tipo === 'inversion').map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-semibold text-slate-700 block mb-1"
+  }, "Aportación Habitual de Inversión (€)"), /*#__PURE__*/React.createElement("input", {
     type: "number",
-    step: "0.01",
+    step: "10",
     value: invFija,
     onChange: e => setInvFija(e.target.value),
     className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
-  })), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-end"
   }, /*#__PURE__*/React.createElement("button", {
     type: "submit",
     className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
-  }, "Guardar Porcentajes")))), /*#__PURE__*/React.createElement("div", {
+  }, "Guardar Configuración")))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-slate-900"
@@ -3443,7 +3583,7 @@ const MovementModal = ({
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [importe, setImporte] = useState('');
   const [cuentaOrigen, setCuentaOrigen] = useState('acc-santander');
-  const [cuentaDestino, setCuentaDestino] = useState('acc-bbva');
+  const [cuentaDestino, setCuentaDestino] = useState('acc-myinvestor');
   const [categoria, setCategoria] = useState('Comida');
   const [comentario, setComentario] = useState('');
   useEffect(() => {
@@ -3453,7 +3593,7 @@ const MovementModal = ({
       setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
       setImporte(editingMovement.importe?.toString() || '');
       setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
-      setCuentaDestino(editingMovement.cuentaDestino || 'acc-bbva');
+      setCuentaDestino(editingMovement.cuentaDestino || 'acc-myinvestor');
       setCategoria(mTipo === 'transferencia' ? 'Transferencia' : editingMovement.categoria || 'Comida');
       setComentario(editingMovement.comentario || '');
     } else {
@@ -3461,7 +3601,7 @@ const MovementModal = ({
       setFecha(new Date().toISOString().split('T')[0]);
       setImporte('');
       setCuentaOrigen('acc-santander');
-      setCuentaDestino('acc-bbva');
+      setCuentaDestino(defaultType === 'transferencia' ? 'acc-myinvestor' : 'acc-bbva');
       setCategoria(defaultType === 'transferencia' ? 'Transferencia' : defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
       setComentario('');
     }
@@ -3599,7 +3739,7 @@ const MovementModal = ({
     className: "text-xs font-bold text-slate-700 block mb-1"
   }, "Comentario / Nota (Opcional)"), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: "ej. Mercadona, Restaurante, Regalo...",
+    placeholder: "ej. Aportación inversión, Mercadona...",
     value: comentario,
     onChange: e => setComentario(e.target.value),
     className: "w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
