@@ -2856,28 +2856,30 @@ const AnaliticaView = () => {
     return fullHistory;
   }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear]);
 
-  // Puntos del gráfico SVG
+  // Puntos del gráfico SVG con holgura superior e inferior para evitar cortes
   const chartGraphData = useMemo(() => {
     if (monthlyVarianceHistory.length === 0) return {
       path: '',
       area: '',
       points: [],
       width: 700,
-      height: 240
+      height: 260
     };
     const values = monthlyVarianceHistory.map(d => d.saldo);
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
-    const margin = (maxVal - minVal) * 0.1 || 100;
-    const range = maxVal + margin - (minVal - margin) || 1;
+    const margin = Math.max((maxVal - minVal) * 0.22, 250);
+    const effectiveMin = minVal - margin;
+    const effectiveMax = maxVal + margin;
+    const range = effectiveMax - effectiveMin || 1;
     const width = 700;
-    const height = 240;
-    const paddingX = 45;
-    const paddingTop = 30;
-    const paddingBottom = 40;
+    const height = 260;
+    const paddingX = 50;
+    const paddingTop = 50;
+    const paddingBottom = 45;
     const points = monthlyVarianceHistory.map((d, idx) => {
       const x = paddingX + idx / Math.max(1, monthlyVarianceHistory.length - 1) * (width - 2 * paddingX);
-      const y = height - paddingBottom - (d.saldo - (minVal - margin)) / range * (height - paddingTop - paddingBottom);
+      const y = height - paddingBottom - (d.saldo - effectiveMin) / range * (height - paddingTop - paddingBottom);
       return {
         x,
         y,
@@ -2893,7 +2895,9 @@ const AnaliticaView = () => {
       width,
       height,
       minVal,
-      maxVal
+      maxVal,
+      effectiveMin,
+      effectiveMax
     };
   }, [monthlyVarianceHistory]);
   const scopeLabel = useMemo(() => {
@@ -2904,6 +2908,135 @@ const AnaliticaView = () => {
     return found ? `Cuenta: ${found.nombre}` : 'Cuenta';
   }, [selectedAccountScope, data.cuentas]);
   const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
+
+  // Función de Exportación a Excel (.xls) completo con tablas formateadas
+  const handleExportExcel = () => {
+    const scopeName = scopeLabel.toUpperCase();
+    const movsList = (data.movimientos || []).filter(m => {
+      if (!m || !m.fecha) return false;
+      if (selectedYear !== 'todos' && !m.fecha.startsWith(selectedYear)) return false;
+      return true;
+    });
+    let excelHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+        <style>
+          th { background-color: #1e293b; color: #ffffff; font-weight: bold; font-family: Calibri, sans-serif; text-align: center; border: 1px solid #cbd5e1; padding: 6px; }
+          td { font-family: Calibri, sans-serif; font-size: 11pt; border: 1px solid #e2e8f0; padding: 5px; }
+          .header-main { background-color: #0f172a; color: #f8fafc; font-size: 14pt; font-weight: bold; text-align: center; padding: 10px; }
+          .num { text-align: right; }
+          .bold { font-weight: bold; }
+          .pos { color: #059669; font-weight: bold; }
+          .neg { color: #dc2626; font-weight: bold; }
+          .section-title { background-color: #f1f5f9; font-weight: bold; font-size: 12pt; padding: 6px; }
+        </style>
+      </head>
+      <body>
+        <table border="1">
+          <tr><td colspan="7" class="header-main">FINANZAS 2026 - INFORME Y VARIANZA: ${scopeName} (${selectedYear})</td></tr>
+          <tr><td colspan="7"></td></tr>
+          <tr><td colspan="7" class="section-title">1. RESUMEN DE SALDOS POR CUENTA</td></tr>
+          <tr>
+            <th>Cuenta</th>
+            <th>Tipo</th>
+            <th>Saldo Inicial</th>
+            <th>Saldo Actual</th>
+            <th>Variación Total</th>
+            <th colspan="2">Cómputo en Total</th>
+          </tr>
+    `;
+    sortedCuentas.forEach(c => {
+      const ini = c.saldoInicial || 0;
+      const act = saldos[c.id] || 0;
+      const varNet = act - ini;
+      excelHtml += `
+        <tr>
+          <td class="bold">${c.nombre}</td>
+          <td>${c.tipo}</td>
+          <td class="num">${ini.toFixed(2)} €</td>
+          <td class="num bold">${act.toFixed(2)} €</td>
+          <td class="num ${varNet >= 0 ? 'pos' : 'neg'}">${varNet >= 0 ? '+' : ''}${varNet.toFixed(2)} €</td>
+          <td colspan="2">${c.incluirEnTotal !== false ? 'Suma al Total' : 'Separada'}</td>
+        </tr>
+      `;
+    });
+    excelHtml += `
+          <tr><td colspan="7"></td></tr>
+          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA MES A MES (${scopeName})</td></tr>
+          <tr>
+            <th>Mes</th>
+            <th>Saldo al Cierre</th>
+            <th>Varianza Neta (€)</th>
+            <th>Varianza (%)</th>
+            <th>Ingresos Mes</th>
+            <th>Gastos Mes</th>
+            <th>Ahorro / Flujo Neto</th>
+          </tr>
+    `;
+    monthlyVarianceHistory.forEach(row => {
+      const isPos = row.diff >= 0;
+      excelHtml += `
+        <tr>
+          <td class="bold">${formatMonthName(row.mes)}</td>
+          <td class="num bold">${row.saldo.toFixed(2)} €</td>
+          <td class="num ${row.prevSaldo === null ? '' : isPos ? 'pos' : 'neg'}">
+            ${row.prevSaldo === null ? 'Inicial' : (isPos ? '+' : '') + row.diff.toFixed(2) + ' €'}
+          </td>
+          <td class="num ${row.prevSaldo === null ? '' : isPos ? 'pos' : 'neg'}">
+            ${row.prevSaldo === null ? '-' : (isPos ? '+' : '') + row.diffPct.toFixed(1) + '%'}
+          </td>
+          <td class="num pos">+${row.ingresos.toFixed(2)} €</td>
+          <td class="num neg">-${row.gastos.toFixed(2)} €</td>
+          <td class="num bold ${row.balance >= 0 ? 'pos' : 'neg'}">${row.balance >= 0 ? '+' : ''}${row.balance.toFixed(2)} €</td>
+        </tr>
+      `;
+    });
+    excelHtml += `
+          <tr><td colspan="7"></td></tr>
+          <tr><td colspan="7" class="section-title">3. REGISTRO DETALLADO DE MOVIMIENTOS (${movsList.length} registros)</td></tr>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Categoría</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Importe</th>
+            <th>Comentario</th>
+          </tr>
+    `;
+    movsList.forEach(m => {
+      const orig = (data.cuentas || []).find(c => c.id === m.cuentaOrigen)?.nombre || '-';
+      const dest = (data.cuentas || []).find(c => c.id === m.cuentaDestino)?.nombre || '-';
+      const isGasto = m.tipo === 'gasto';
+      const isIngreso = m.tipo === 'ingreso';
+      excelHtml += `
+        <tr>
+          <td>${m.fecha}</td>
+          <td>${m.tipo}</td>
+          <td>${m.categoria || ''}</td>
+          <td>${orig}</td>
+          <td>${dest}</td>
+          <td class="num bold ${isGasto ? 'neg' : isIngreso ? 'pos' : ''}">${isGasto ? '-' : isIngreso ? '+' : ''}${parseFloat(m.importe || 0).toFixed(2)} €</td>
+          <td>${m.comentario || ''}</td>
+        </tr>
+      `;
+    });
+    excelHtml += `
+        </table>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([excelHtml], {
+      type: 'application/vnd.ms-excel;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Finanzas_2026_${selectedYear}_${selectedAccountScope}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-6 pb-24 md:pb-8"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2920,8 +3053,15 @@ const AnaliticaView = () => {
   }, "Observa el saldo con el que cerraste cada mes, las variaciones netas y el recorrido de tus cuentas.")), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: handleExportExcel,
+    className: "flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all",
+    title: "Descargar hoja de cálculo Excel completa con históricos y movimientos"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "table",
+    className: "w-4 h-4"
+  }), "Exportar Excel (.xls)"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsReportModalOpen(true),
-    className: "flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
+    className: "flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "presentation",
     className: "w-4 h-4"
@@ -2987,10 +3127,10 @@ const AnaliticaView = () => {
   }, "Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.")), /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200"
   }, monthlyVarianceHistory.length, " Meses computados")), /*#__PURE__*/React.createElement("div", {
-    className: "relative w-full overflow-x-auto select-none pt-2 pb-1"
+    className: "relative w-full select-none pt-4 pb-2"
   }, /*#__PURE__*/React.createElement("svg", {
-    viewBox: `0 0 ${chartGraphData.width || 700} ${chartGraphData.height || 240}`,
-    className: "w-full h-64 overflow-visible"
+    viewBox: `0 0 ${chartGraphData.width || 700} ${chartGraphData.height || 260}`,
+    className: "w-full h-72 overflow-visible"
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: "varianceGrad",
     x1: "0",
@@ -3000,32 +3140,32 @@ const AnaliticaView = () => {
   }, /*#__PURE__*/React.createElement("stop", {
     offset: "0%",
     stopColor: "#3b82f6",
-    stopOpacity: "0.28"
+    stopOpacity: "0.25"
   }), /*#__PURE__*/React.createElement("stop", {
     offset: "100%",
     stopColor: "#3b82f6",
     stopOpacity: "0.0"
   }))), /*#__PURE__*/React.createElement("line", {
-    x1: "45",
-    y1: "30",
-    x2: "655",
-    y2: "30",
+    x1: "50",
+    y1: "50",
+    x2: "650",
+    y2: "50",
     stroke: "#f1f5f9",
     strokeWidth: "1",
     strokeDasharray: "3 3"
   }), /*#__PURE__*/React.createElement("line", {
-    x1: "45",
-    y1: "115",
-    x2: "655",
-    y2: "115",
+    x1: "50",
+    y1: "130",
+    x2: "650",
+    y2: "130",
     stroke: "#f1f5f9",
     strokeWidth: "1",
     strokeDasharray: "3 3"
   }), /*#__PURE__*/React.createElement("line", {
-    x1: "45",
-    y1: "200",
-    x2: "655",
-    y2: "200",
+    x1: "50",
+    y1: "215",
+    x2: "650",
+    y2: "215",
     stroke: "#e2e8f0",
     strokeWidth: "1"
   }), chartGraphData.area && /*#__PURE__*/React.createElement("path", {
@@ -3040,9 +3180,9 @@ const AnaliticaView = () => {
     strokeLinejoin: "round"
   }), hoveredPoint && /*#__PURE__*/React.createElement("line", {
     x1: hoveredPoint.x,
-    y1: "20",
+    y1: "35",
     x2: hoveredPoint.x,
-    y2: "200",
+    y2: "215",
     stroke: "#94a3b8",
     strokeWidth: "1.5",
     strokeDasharray: "4 4"
@@ -3056,56 +3196,61 @@ const AnaliticaView = () => {
     }, /*#__PURE__*/React.createElement("circle", {
       cx: p.x,
       cy: p.y,
-      r: "18",
+      r: "20",
       fill: "transparent"
     }), isHovered && /*#__PURE__*/React.createElement("circle", {
       cx: p.x,
       cy: p.y,
-      r: "9",
+      r: "10",
       fill: "#93c5fd",
-      opacity: "0.5",
+      opacity: "0.6",
       className: "animate-ping"
     }), /*#__PURE__*/React.createElement("circle", {
       cx: p.x,
       cy: p.y,
-      r: isHovered ? "6" : "4.5",
+      r: isHovered ? "6.5" : "4.5",
       fill: "#ffffff",
       stroke: "#2563eb",
       strokeWidth: isHovered ? "3.5" : "2.5"
     }), /*#__PURE__*/React.createElement("text", {
       x: p.x,
-      y: "222",
+      y: "240",
       textAnchor: "middle",
       fontSize: "10",
       fill: isHovered ? "#0f172a" : "#64748b",
       fontWeight: isHovered ? "800" : "600"
     }, formatMonthName(p.mes).split(' ')[0].substring(0, 3)));
-  })), hoveredPoint && /*#__PURE__*/React.createElement("div", {
-    className: "absolute pointer-events-none bg-slate-900 text-white p-3 rounded-2xl shadow-xl text-xs z-30 border border-slate-700 animate-fadeIn",
-    style: {
-      left: `${hoveredPoint.x / (chartGraphData.width || 700) * 100}%`,
-      top: `${hoveredPoint.y / (chartGraphData.height || 240) * 100 - 30}%`,
-      transform: 'translate(-50%, -100%)'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3"
-  }, /*#__PURE__*/React.createElement("span", null, formatMonthName(hoveredPoint.mes)), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-slate-400 font-mono"
-  }, hoveredPoint.movCount, " movs")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline justify-between gap-4"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400"
-  }, "Saldo final:"), /*#__PURE__*/React.createElement("span", {
-    className: "font-extrabold text-white font-sans text-sm"
-  }, formatCurrency(hoveredPoint.saldo))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline justify-between gap-4 mt-1"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400"
-  }, "Varianza:"), /*#__PURE__*/React.createElement("span", {
-    className: `font-bold font-sans ${hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
-  }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] ml-1"
-  }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)")))))), /*#__PURE__*/React.createElement("div", {
+  })), hoveredPoint && (() => {
+    const pctX = hoveredPoint.x / (chartGraphData.width || 700) * 100;
+    const clampedPctX = Math.max(16, Math.min(84, pctX));
+    const isNearTop = hoveredPoint.y < 95;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "absolute pointer-events-none bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn",
+      style: {
+        left: `${clampedPctX}%`,
+        top: isNearTop ? `${hoveredPoint.y / (chartGraphData.height || 260) * 100 + 12}%` : `${hoveredPoint.y / (chartGraphData.height || 260) * 100 - 10}%`,
+        transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3"
+    }, /*#__PURE__*/React.createElement("span", null, formatMonthName(hoveredPoint.mes)), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-slate-400 font-mono"
+    }, hoveredPoint.movCount, " movs")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-baseline justify-between gap-4"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "Saldo final:"), /*#__PURE__*/React.createElement("span", {
+      className: "font-extrabold text-white font-sans text-sm"
+    }, formatCurrency(hoveredPoint.saldo))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-baseline justify-between gap-4 mt-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "Varianza:"), /*#__PURE__*/React.createElement("span", {
+      className: `font-bold font-sans ${hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
+    }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] ml-1"
+    }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)"))));
+  })())), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between"
