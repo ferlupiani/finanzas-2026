@@ -922,6 +922,19 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
             <Icon name="plus" className="w-4 h-4" />
             <span className="hidden sm:inline">Nuevo</span>
           </button>
+
+          {/* Acceso a Ajustes (visible en móvil y escritorio en la esquina superior derecha) */}
+          <button
+            onClick={() => setActiveTab('ajustes')}
+            title="Ajustes y Configuración"
+            className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all active:scale-95 ${
+              activeTab === 'ajustes'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border-slate-200/80'
+            }`}
+          >
+            <Icon name="settings" className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>
@@ -3180,50 +3193,37 @@ const AnaliticaView = () => {
             })}
           </svg>
 
-          {/* Tooltip flotante interactivo con posicionamiento inteligente para no cortarse */}
-          {hoveredPoint && (() => {
-            const pctX = (hoveredPoint.x / (chartGraphData.width || 700)) * 100;
-            const clampedPctX = Math.max(16, Math.min(84, pctX));
-            const isNearTop = hoveredPoint.y < 95;
+          {/* Tooltip flotante interactivo centrado (evita ensanchar pantalla en iPhone/iPad) */}
+          {hoveredPoint && (
+            <div
+              className="absolute pointer-events-none bg-slate-900 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn w-auto max-w-[92%] sm:max-w-xs left-1/2 -translate-x-1/2 top-3 sm:top-4"
+            >
+              <div className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-4">
+                <span>{formatMonthName(hoveredPoint.mes)}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{hoveredPoint.movCount} movs</span>
+              </div>
 
-            return (
-              <div
-                className="absolute pointer-events-none bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn"
-                style={{
-                  left: `${clampedPctX}%`,
-                  top: isNearTop
-                    ? `${(hoveredPoint.y / (chartGraphData.height || 260)) * 100 + 12}%`
-                    : `${(hoveredPoint.y / (chartGraphData.height || 260)) * 100 - 10}%`,
-                  transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
-                }}
-              >
-                <div className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3">
-                  <span>{formatMonthName(hoveredPoint.mes)}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">{hoveredPoint.movCount} movs</span>
-                </div>
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-slate-400">Saldo final:</span>
+                <span className="font-extrabold text-white font-sans text-sm">
+                  {formatCurrency(hoveredPoint.saldo)}
+                </span>
+              </div>
 
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-slate-400">Saldo final:</span>
-                  <span className="font-extrabold text-white font-sans text-sm">
-                    {formatCurrency(hoveredPoint.saldo)}
+              {hoveredPoint.prevSaldo !== null && (
+                <div className="flex items-baseline justify-between gap-4 mt-1">
+                  <span className="text-slate-400">Varianza:</span>
+                  <span className={`font-bold font-sans ${
+                    hoveredPoint.diff > 0 ? 'text-emerald-400' :
+                    hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'
+                  }`}>
+                    {hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff)}
+                    <span className="text-[10px] ml-1">({hoveredPoint.diff > 0 ? '+' : ''}{hoveredPoint.diffPct.toFixed(1)}%)</span>
                   </span>
                 </div>
-
-                {hoveredPoint.prevSaldo !== null && (
-                  <div className="flex items-baseline justify-between gap-4 mt-1">
-                    <span className="text-slate-400">Varianza:</span>
-                    <span className={`font-bold font-sans ${
-                      hoveredPoint.diff > 0 ? 'text-emerald-400' :
-                      hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'
-                    }`}>
-                      {hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff)}
-                      <span className="text-[10px] ml-1">({hoveredPoint.diff > 0 ? '+' : ''}{hoveredPoint.diffPct.toFixed(1)}%)</span>
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              )}
+            </div>
+          )}
         </div>
       </div>
 

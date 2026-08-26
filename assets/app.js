@@ -1295,7 +1295,14 @@ const Navbar = ({
     className: "w-4 h-4"
   }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
-  }, "Nuevo")))));
+  }, "Nuevo")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setActiveTab('ajustes'),
+    title: "Ajustes y Configuración",
+    className: `flex items-center justify-center w-8 h-8 rounded-xl border transition-all active:scale-95 ${activeTab === 'ajustes' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border-slate-200/80'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "settings",
+    className: "w-4 h-4"
+  })))));
 };
 
 // ==========================================
@@ -3223,37 +3230,27 @@ const AnaliticaView = () => {
       fill: isHovered ? "#0f172a" : "#64748b",
       fontWeight: isHovered ? "800" : "600"
     }, formatMonthName(p.mes).split(' ')[0].substring(0, 3)));
-  })), hoveredPoint && (() => {
-    const pctX = hoveredPoint.x / (chartGraphData.width || 700) * 100;
-    const clampedPctX = Math.max(16, Math.min(84, pctX));
-    const isNearTop = hoveredPoint.y < 95;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "absolute pointer-events-none bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn",
-      style: {
-        left: `${clampedPctX}%`,
-        top: isNearTop ? `${hoveredPoint.y / (chartGraphData.height || 260) * 100 + 12}%` : `${hoveredPoint.y / (chartGraphData.height || 260) * 100 - 10}%`,
-        transform: isNearTop ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3"
-    }, /*#__PURE__*/React.createElement("span", null, formatMonthName(hoveredPoint.mes)), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] text-slate-400 font-mono"
-    }, hoveredPoint.movCount, " movs")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-baseline justify-between gap-4"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, "Saldo final:"), /*#__PURE__*/React.createElement("span", {
-      className: "font-extrabold text-white font-sans text-sm"
-    }, formatCurrency(hoveredPoint.saldo))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
-      className: "flex items-baseline justify-between gap-4 mt-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, "Varianza:"), /*#__PURE__*/React.createElement("span", {
-      className: `font-bold font-sans ${hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
-    }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] ml-1"
-    }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)"))));
-  })())), /*#__PURE__*/React.createElement("div", {
+  })), hoveredPoint && /*#__PURE__*/React.createElement("div", {
+    className: "absolute pointer-events-none bg-slate-900 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn w-auto max-w-[92%] sm:max-w-xs left-1/2 -translate-x-1/2 top-3 sm:top-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("span", null, formatMonthName(hoveredPoint.mes)), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-400 font-mono"
+  }, hoveredPoint.movCount, " movs")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "Saldo final:"), /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-white font-sans text-sm"
+  }, formatCurrency(hoveredPoint.saldo))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-4 mt-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "Varianza:"), /*#__PURE__*/React.createElement("span", {
+    className: `font-bold font-sans ${hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
+  }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] ml-1"
+  }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)")))))), /*#__PURE__*/React.createElement("div", {
     onMouseLeave: () => setHoveredPoint(null),
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
