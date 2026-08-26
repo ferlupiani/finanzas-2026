@@ -272,6 +272,16 @@ const Icon = ({
 // ==========================================
 // 💶 FORMATO Y UTILIDADES
 // ==========================================
+const ACCOUNT_ORDER = ['acc-bbva', 'acc-santander', 'acc-sab-ahorro', 'acc-sab-irpf', 'acc-efectivo', 'acc-myinvestor', 'acc-trade'];
+const sortCuentas = (cuentas = []) => {
+  return [...cuentas].sort((a, b) => {
+    const idxA = ACCOUNT_ORDER.indexOf(a.id);
+    const idxB = ACCOUNT_ORDER.indexOf(b.id);
+    const orderA = idxA !== -1 ? idxA : 999;
+    const orderB = idxB !== -1 ? idxB : 999;
+    return orderA - orderB;
+  });
+};
 const formatCurrency = val => {
   const num = typeof val === 'number' ? val : parseFloat(val) || 0;
   return new Intl.NumberFormat('es-ES', {
@@ -332,15 +342,15 @@ const getAccountBadge = (accId, cuentas = []) => {
     bgClass: 'bg-slate-100 text-slate-700 border-slate-200'
   };
   switch (acc.id) {
-    case 'acc-santander':
-      return {
-        ...acc,
-        bgClass: 'bg-red-50 text-red-700 border-red-200'
-      };
     case 'acc-bbva':
       return {
         ...acc,
         bgClass: 'bg-blue-50 text-blue-900 border-blue-200'
+      };
+    case 'acc-santander':
+      return {
+        ...acc,
+        bgClass: 'bg-red-50 text-red-700 border-red-200'
       };
     case 'acc-sab-ahorro':
       return {
@@ -352,6 +362,11 @@ const getAccountBadge = (accId, cuentas = []) => {
         ...acc,
         bgClass: 'bg-cyan-50 text-cyan-800 border-cyan-200'
       };
+    case 'acc-efectivo':
+      return {
+        ...acc,
+        bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      };
     case 'acc-trade':
       return {
         ...acc,
@@ -361,11 +376,6 @@ const getAccountBadge = (accId, cuentas = []) => {
       return {
         ...acc,
         bgClass: 'bg-purple-50 text-purple-700 border-purple-200'
-      };
-    case 'acc-efectivo':
-      return {
-        ...acc,
-        bgClass: 'bg-emerald-50 text-emerald-800 border-emerald-200'
       };
     default:
       return {
@@ -397,25 +407,25 @@ const defaultFallbackData = {
       id: 'gf-1',
       nombre: 'Alquiler + Gastos Casa',
       categoria: 'Alquiler',
-      cuenta: 'acc-santander',
+      cuenta: 'acc-bbva',
       importe: 325.00
     }, {
       id: 'gf-2',
       nombre: 'Spotify',
       categoria: 'Suscripciones',
-      cuenta: 'acc-santander',
+      cuenta: 'acc-bbva',
       importe: 6.49
     }, {
       id: 'gf-3',
       nombre: 'Basic Fit',
       categoria: 'Suscripciones',
-      cuenta: 'acc-santander',
+      cuenta: 'acc-bbva',
       importe: 24.99
     }, {
       id: 'gf-4',
       nombre: 'AppleCare+',
       categoria: 'Suscripciones',
-      cuenta: 'acc-santander',
+      cuenta: 'acc-bbva',
       importe: 5.49
     }],
     ingresosFijosDefecto: [{
@@ -435,14 +445,6 @@ const defaultFallbackData = {
     }]
   },
   cuentas: [{
-    id: 'acc-santander',
-    nombre: 'Santander',
-    tipo: 'banco',
-    activa: true,
-    incluirEnTotal: true,
-    color: '#DC2626',
-    saldoInicial: 175.77
-  }, {
     id: 'acc-bbva',
     nombre: 'BBVA',
     tipo: 'banco',
@@ -450,6 +452,14 @@ const defaultFallbackData = {
     incluirEnTotal: true,
     color: '#1E3A8A',
     saldoInicial: 234.67
+  }, {
+    id: 'acc-santander',
+    nombre: 'Santander',
+    tipo: 'banco',
+    activa: true,
+    incluirEnTotal: true,
+    color: '#DC2626',
+    saldoInicial: 175.77
   }, {
     id: 'acc-sab-ahorro',
     nombre: 'Sabadell Ahorro',
@@ -467,13 +477,13 @@ const defaultFallbackData = {
     color: '#0EA5E9',
     saldoInicial: 202.16
   }, {
-    id: 'acc-trade',
-    nombre: 'Trade Republic',
-    tipo: 'inversion',
+    id: 'acc-efectivo',
+    nombre: 'Efectivo',
+    tipo: 'metalico',
     activa: true,
-    incluirEnTotal: false,
-    color: '#18181B',
-    saldoInicial: -313.25
+    incluirEnTotal: true,
+    color: '#16A34A',
+    saldoInicial: 810.00
   }, {
     id: 'acc-myinvestor',
     nombre: 'MyInvestor',
@@ -483,13 +493,13 @@ const defaultFallbackData = {
     color: '#8B5CF6',
     saldoInicial: 0.00
   }, {
-    id: 'acc-efectivo',
-    nombre: 'Efectivo',
-    tipo: 'metalico',
+    id: 'acc-trade',
+    nombre: 'Trade Republic',
+    tipo: 'inversion',
     activa: true,
-    incluirEnTotal: true,
-    color: '#16A34A',
-    saldoInicial: 810.00
+    incluirEnTotal: false,
+    color: '#18181B',
+    saldoInicial: -313.25
   }],
   categorias: [{
     id: 'cat-alquiler',
@@ -629,7 +639,6 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
     return def;
   };
   const rawCuentas = toCleanArray(input.cuentas, fallback.cuentas);
-  // Ensure acc-myinvestor exists
   const hasMyInvestor = rawCuentas.some(c => c && c.id === 'acc-myinvestor');
   if (!hasMyInvestor) {
     rawCuentas.push({
@@ -642,10 +651,10 @@ const normalizeFinanceData = (input, fallback = defaultFallbackData) => {
       saldoInicial: 0.00
     });
   }
-  const cuentas = rawCuentas.map(c => ({
+  const cuentas = sortCuentas(rawCuentas.map(c => ({
     ...c,
     incluirEnTotal: ['acc-sab-irpf', 'acc-trade', 'acc-myinvestor'].includes(c.id) ? c.incluirEnTotal === true : c.incluirEnTotal !== false
-  }));
+  })));
   const categorias = toCleanArray(input.categorias, fallback.categorias);
   const fuentesIngreso = toCleanArray(input.fuentesIngreso, fallback.fuentesIngreso);
   let movimientos = toCleanArray(input.movimientos, []);
@@ -899,7 +908,7 @@ const FinanceProvider = ({
       id: newId,
       nombre: gasto.nombre.trim(),
       categoria: gasto.categoria || 'Suscripciones',
-      cuenta: gasto.cuenta || 'acc-santander',
+      cuenta: gasto.cuenta || 'acc-bbva',
       importe: parseFloat(gasto.importe) || 0.00
     };
     updateAndSyncData(prev => ({
@@ -979,7 +988,7 @@ const FinanceProvider = ({
     ahorroPct,
     gastoPct,
     inversionAmount,
-    cuentaIngreso = 'acc-santander',
+    cuentaIngreso = 'acc-bbva',
     cuentaInversion = 'acc-myinvestor'
   }) => {
     const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
@@ -1343,7 +1352,7 @@ const BottomNav = ({
 };
 
 // ==========================================
-// 📊 DASHBOARD PRINCIPAL CON BLOQUE DE INVERSIÓN
+// 📊 DASHBOARD PRINCIPAL (CUENTAS EN ORDEN + DESPLEGABLE INVERSIONES)
 // ==========================================
 const DashboardView = ({
   setActiveTab,
@@ -1360,6 +1369,7 @@ const DashboardView = ({
     saldoTradeRepublic,
     saldoMyInvestor
   } = useFinance();
+  const [isInvExpanded, setIsInvExpanded] = useState(false);
   const currentMonthStats = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -1384,6 +1394,17 @@ const DashboardView = ({
   const recentMovements = useMemo(() => {
     return (data.movimientos || []).slice(0, 8);
   }, [data.movimientos]);
+
+  // Lista de cuentas operativas en orden estricto: BBVA, Santander, Sabadell Ahorro, Sabadell IRPF, Efectivo
+  const orderedStandardAccounts = useMemo(() => {
+    const desiredOrder = ['acc-bbva', 'acc-santander', 'acc-sab-ahorro', 'acc-sab-irpf', 'acc-efectivo'];
+    const accList = (data.cuentas || []).filter(c => c && c.activa && c.tipo !== 'inversion');
+    return accList.sort((a, b) => {
+      const idxA = desiredOrder.indexOf(a.id);
+      const idxB = desiredOrder.indexOf(b.id);
+      return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+    });
+  }, [data.cuentas]);
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-6 pb-24 md:pb-8"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1460,72 +1481,7 @@ const DashboardView = ({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "zap",
     className: "w-4 h-4 text-slate-950"
-  }), "Motor Sueldo & Inversión"))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 text-white p-6 rounded-3xl border border-purple-800/30 shadow-lg relative overflow-hidden"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "absolute right-0 top-0 -mt-8 -mr-8 w-48 h-48 rounded-full bg-purple-500/10 blur-2xl pointer-events-none"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-200 border border-purple-400/30 mb-1"
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "trendingUp",
-    className: "w-3.5 h-3.5 text-purple-300"
-  }), "Bloque de Inversión Conjunta (No suma al gasto corriente)"), /*#__PURE__*/React.createElement("h2", {
-    className: "text-lg font-bold text-white"
-  }, "Cartera de Inversión"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-300"
-  }, "Fondo conjunto en MyInvestor y Trade Republic")), /*#__PURE__*/React.createElement("div", {
-    className: "text-left sm:text-right"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-purple-300 uppercase tracking-wider font-semibold block"
-  }, "Total Invertido"), /*#__PURE__*/React.createElement("div", {
-    className: "text-2xl sm:text-3xl font-extrabold text-purple-200 font-sans"
-  }, formatCurrency(totalInversion)))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5"
-  }, /*#__PURE__*/React.createElement("div", {
-    onClick: () => onSelectAccountFilter('acc-myinvestor'),
-    className: "bg-white/10 hover:bg-white/15 border border-purple-400/20 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "w-3.5 h-3.5 rounded-full bg-purple-500 ring-4 ring-purple-500/20"
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-white group-hover:text-purple-300 transition-colors"
-  }, "MyInvestor"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-purple-200 font-medium"
-  }, "Aportaciones activas mensuales"))), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30"
-  }, "Principal")), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-purple-200 font-medium"
-  }, "Saldo acumulado"), /*#__PURE__*/React.createElement("span", {
-    className: "text-xl font-extrabold text-white font-sans"
-  }, formatCurrency(saldoMyInvestor)))), /*#__PURE__*/React.createElement("div", {
-    onClick: () => onSelectAccountFilter('acc-trade'),
-    className: "bg-white/5 hover:bg-white/10 border border-white/10 p-4 rounded-2xl transition-all cursor-pointer flex flex-col justify-between group"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "w-3.5 h-3.5 rounded-full bg-zinc-400 ring-4 ring-white/10"
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-white group-hover:text-zinc-300 transition-colors"
-  }, "Trade Republic"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-slate-400 font-medium"
-  }, "Fondo consolidado (sin nuevas aportaciones)"))), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-300"
-  }, "Mantenido")), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-slate-400 font-medium"
-  }, "Saldo disponible"), /*#__PURE__*/React.createElement("span", {
-    className: "text-xl font-extrabold text-slate-200 font-sans"
-  }, formatCurrency(saldoTradeRepublic)))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), "Motor Sueldo & Inversión"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 px-1"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-bold text-slate-900"
@@ -1533,7 +1489,7 @@ const DashboardView = ({
     className: "text-xs text-slate-500"
   }, "Toca una cuenta para filtrar diario")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => {
+  }, orderedStandardAccounts.map(c => {
     const saldo = saldos[c.id] || 0;
     const badge = getAccountBadge(c.id, data.cuentas);
     const isExcluded = c.incluirEnTotal === false;
@@ -1554,18 +1510,76 @@ const DashboardView = ({
       className: "text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors"
     }, c.nombre), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-medium text-slate-400 capitalize"
-    }, c.tipo === 'inversion' ? 'Inversión' : c.tipo))), isExcluded ? /*#__PURE__*/React.createElement("span", {
+    }, c.id === 'acc-bbva' ? 'Cuenta Principal' : c.tipo))), isExcluded ? /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge.bgClass}`
-    }, c.tipo === 'inversion' ? 'Bloque Inversión' : 'No suma al total') : /*#__PURE__*/React.createElement("span", {
+    }, "No suma al total") : /*#__PURE__*/React.createElement("span", {
       className: `text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.bgClass}`
     }, totalPatrimonio > 0 ? Math.max(0, Math.round(saldo / totalPatrimonio * 100)) : 0, "%")), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-xs text-slate-400 font-medium"
-    }, "Saldo"), /*#__PURE__*/React.createElement("span", {
+    }, "Saldo disponible"), /*#__PURE__*/React.createElement("span", {
       className: `text-xl font-bold font-sans ${saldo < 0 ? 'text-rose-600' : 'text-slate-900'}`
     }, formatCurrency(saldo))));
-  }))), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "group relative bg-white hover:bg-slate-50/80 p-5 rounded-2xl border border-purple-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-3.5 h-3.5 rounded-full bg-purple-600 ring-4 ring-purple-100"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors"
+  }, "Inversiones"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-medium text-slate-400"
+  }, "MyInvestor & Trade Republic"))), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200"
+  }, "No suma al total")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-3 border-t border-slate-100 flex items-baseline justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400 font-medium"
+  }, "Saldo conjunto"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xl font-extrabold font-sans text-purple-900"
+  }, formatCurrency(totalInversion)))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 pt-2.5 border-t border-slate-100"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: e => {
+      e.stopPropagation();
+      setIsInvExpanded(!isInvExpanded);
+    },
+    className: "w-full flex items-center justify-between text-[11px] font-bold text-purple-700 hover:text-purple-900 py-1 transition-colors"
+  }, /*#__PURE__*/React.createElement("span", null, isInvExpanded ? 'Ocultar desglose' : 'Ver cuentas por separado'), /*#__PURE__*/React.createElement(Icon, {
+    name: isInvExpanded ? 'chevronUp' : 'chevronDown',
+    className: "w-3.5 h-3.5 text-purple-600"
+  })), isInvExpanded && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 space-y-1.5 pt-1.5 border-t border-purple-100/60 animate-fadeIn"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: () => onSelectAccountFilter('acc-myinvestor'),
+    className: "flex items-center justify-between p-2 rounded-xl bg-purple-50/70 hover:bg-purple-100/80 cursor-pointer transition-colors",
+    title: "Filtrar movimientos de MyInvestor"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-purple-500"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-800"
+  }, "MyInvestor")), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-purple-900 font-sans"
+  }, formatCurrency(saldoMyInvestor))), /*#__PURE__*/React.createElement("div", {
+    onClick: () => onSelectAccountFilter('acc-trade'),
+    className: "flex items-center justify-between p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 cursor-pointer transition-colors",
+    title: "Filtrar movimientos de Trade Republic"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-zinc-800"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-800"
+  }, "Trade Republic")), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-zinc-900 font-sans"
+  }, formatCurrency(saldoTradeRepublic)))))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between"
@@ -1661,7 +1675,7 @@ const SueldoEngineView = ({
 
   // Inversión mensual flexible (100, 200, 300 o personalizada)
   const [inversionAmount, setInversionAmount] = useState(data.config?.inversionFija || 200.00);
-  const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
+  const [cuentaIngreso, setCuentaIngreso] = useState('acc-bbva');
   const [cuentaInversion, setCuentaInversion] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
   const [distributionResult, setDistributionResult] = useState(null);
   const [notificationMsg, setNotificationMsg] = useState('');
@@ -1678,7 +1692,7 @@ const SueldoEngineView = ({
   const [isManageFixedExpOpen, setIsManageFixedExpOpen] = useState(false);
   const [newFixedExpName, setNewFixedExpName] = useState('');
   const [newFixedExpCategory, setNewFixedExpCategory] = useState('Suscripciones');
-  const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-santander');
+  const [newFixedExpAccount, setNewFixedExpAccount] = useState('acc-bbva');
   const [newFixedExpAmt, setNewFixedExpAmt] = useState('');
   const [fixedExpSelections, setFixedExpSelections] = useState({});
 
@@ -1690,6 +1704,7 @@ const SueldoEngineView = ({
   const [newFixedIncAmt, setNewFixedIncAmt] = useState('');
   const [newFixedIncIsVariable, setNewFixedIncIsVariable] = useState(false);
   const [fixedIncSelections, setFixedIncSelections] = useState({});
+  const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
   const totalIngresoCalculado = useMemo(() => {
     return Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
   }, [incomes]);
@@ -1737,7 +1752,7 @@ const SueldoEngineView = ({
     }
   };
   const handleQuickRegisterFixedExpense = (gf, index) => {
-    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-santander';
+    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-bbva';
     const rawAmt = fixedExpSelections[gf.id || index]?.importe;
     const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : gf.importe;
     if (isNaN(finalAmt) || finalAmt <= 0) {
@@ -1983,7 +1998,7 @@ const SueldoEngineView = ({
     value: cuentaIngreso,
     onChange: e => setCuentaIngreso(e.target.value),
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -2044,7 +2059,7 @@ const SueldoEngineView = ({
     className: "flex items-center gap-2 font-bold text-amber-300"
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-2.5 h-2.5 rounded-full bg-amber-400"
-  }), "Disponible Gastos"), /*#__PURE__*/React.createElement("span", {
+  }), "Disponible Gastos (BBVA)"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-amber-300 font-sans"
   }, formatCurrency(preview.gasto))))), /*#__PURE__*/React.createElement("button", {
     onClick: handleExecuteDistribution,
@@ -2064,7 +2079,7 @@ const SueldoEngineView = ({
     className: "w-4 h-4 text-rose-600"
   }), "Gastos Fijos & Suscripciones (Activar cuando se cobren)"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-0.5"
-  }, "Elige la cuenta bancaria de cargo y pulsa \"Pagar\" el día que te pasen el recibo.")), /*#__PURE__*/React.createElement("button", {
+  }, "Elige la cuenta bancaria de cargo (BBVA predeterminada) y pulsa \"Pagar\" el día que te pasen el recibo.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsManageFixedExpOpen(!isManageFixedExpOpen),
     className: "text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all self-start sm:self-auto flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
@@ -2135,7 +2150,7 @@ const SueldoEngineView = ({
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
   }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => {
     const currentSelection = fixedExpSelections[gf.id || idx] || {};
-    const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-santander';
+    const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-bbva';
     const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : gf.importe;
     return /*#__PURE__*/React.createElement("div", {
       key: gf.id || idx,
@@ -2163,7 +2178,7 @@ const SueldoEngineView = ({
         }));
       },
       className: "bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
-    }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    }, sortedCuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
       key: c.id,
       value: c.id
     }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -2255,7 +2270,7 @@ const SueldoEngineView = ({
     value: newFixedIncAccount,
     onChange: e => setNewFixedIncAccount(e.target.value),
     className: "text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
-  }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))), /*#__PURE__*/React.createElement("input", {
@@ -2300,7 +2315,7 @@ const SueldoEngineView = ({
         }));
       },
       className: "bg-white border border-emerald-200 rounded-lg px-2 py-1 text-slate-800 font-semibold text-[11px]"
-    }, (data.cuentas || []).filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+    }, sortedCuentas.filter(c => c.activa).map(c => /*#__PURE__*/React.createElement("option", {
       key: c.id,
       value: c.id
     }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -2376,6 +2391,7 @@ const MovimientosView = ({
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos]);
+  const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
   const filteredMovimientos = useMemo(() => {
     return (data.movimientos || []).filter(m => {
       if (!m) return false;
@@ -2521,7 +2537,7 @@ const MovimientosView = ({
     className: "text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
   }, /*#__PURE__*/React.createElement("option", {
     value: "todos"
-  }, "Todas las cuentas"), (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("option", {
+  }, "Todas las cuentas"), sortedCuentas.map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), /*#__PURE__*/React.createElement("div", {
@@ -2935,7 +2951,7 @@ const AnaliticaView = () => {
             <th colspan="2">CONFIGURACION</th>
           </tr>
     `;
-    (data.cuentas || []).forEach(c => {
+    sortCuentas(data.cuentas || []).forEach(c => {
       const saldoIni = c.saldoInicial || 0;
       const saldoAct = saldos[c.id] || 0;
       const movNeto = saldoAct - saldoIni;
@@ -3347,6 +3363,7 @@ const AjustesView = () => {
   const [invFija, setInvFija] = useState(data.config?.inversionFija || 200.00);
   const [cuentaInvDefecto, setCuentaInvDefecto] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
   const [statusMsg, setStatusMsg] = useState('');
+  const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
   const handleSaveFirebase = e => {
     e.preventDefault();
     setFirebaseUrl(inputUrl);
@@ -3454,7 +3471,7 @@ const AjustesView = () => {
     className: "text-xs text-slate-500 mt-0.5"
   }, "Configura la visibilidad de cada cuenta y si suma al Patrimonio Líquido Disponible.")), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, (data.cuentas || []).map(c => /*#__PURE__*/React.createElement("div", {
+  }, sortedCuentas.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
     className: "flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100 gap-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -3521,12 +3538,12 @@ const AjustesView = () => {
     value: cuentaInvDefecto,
     onChange: e => setCuentaInvDefecto(e.target.value),
     className: "w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900"
-  }, (data.cuentas || []).filter(c => c && c.activa && c.tipo === 'inversion').map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa && c.tipo === 'inversion').map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "text-xs font-semibold text-slate-700 block mb-1"
-  }, "Aportación Habitual de Inversión (€)"), /*#__PURE__*/React.createElement("input", {
+  }, "Inversión Mensual (MyInvestor €)"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     step: "10",
     value: invFija,
@@ -3566,7 +3583,7 @@ const AjustesView = () => {
 };
 
 // ==========================================
-// ➕ MODAL DE CREACIÓN / EDICIÓN DE MOVIMIENTO
+// ➕ MODAL DE CREACIÓN / EDICIÓN DE MOVIMIENTO (BBVA PREDETERMINADA)
 // ==========================================
 const MovementModal = ({
   isOpen,
@@ -3582,17 +3599,18 @@ const MovementModal = ({
   const [tipo, setTipo] = useState(defaultType);
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [importe, setImporte] = useState('');
-  const [cuentaOrigen, setCuentaOrigen] = useState('acc-santander');
-  const [cuentaDestino, setCuentaDestino] = useState('acc-myinvestor');
+  const [cuentaOrigen, setCuentaOrigen] = useState('acc-bbva');
+  const [cuentaDestino, setCuentaDestino] = useState('acc-bbva');
   const [categoria, setCategoria] = useState('Comida');
   const [comentario, setComentario] = useState('');
+  const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
   useEffect(() => {
     if (editingMovement) {
       const mTipo = editingMovement.tipo || 'gasto';
       setTipo(mTipo);
       setFecha(editingMovement.fecha || new Date().toISOString().split('T')[0]);
       setImporte(editingMovement.importe?.toString() || '');
-      setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-santander');
+      setCuentaOrigen(editingMovement.cuentaOrigen || 'acc-bbva');
       setCuentaDestino(editingMovement.cuentaDestino || 'acc-myinvestor');
       setCategoria(mTipo === 'transferencia' ? 'Transferencia' : editingMovement.categoria || 'Comida');
       setComentario(editingMovement.comentario || '');
@@ -3600,7 +3618,7 @@ const MovementModal = ({
       setTipo(defaultType);
       setFecha(new Date().toISOString().split('T')[0]);
       setImporte('');
-      setCuentaOrigen('acc-santander');
+      setCuentaOrigen('acc-bbva');
       setCuentaDestino(defaultType === 'transferencia' ? 'acc-myinvestor' : 'acc-bbva');
       setCategoria(defaultType === 'transferencia' ? 'Transferencia' : defaultType === 'ingreso' ? 'Sueldo/Nómina' : 'Comida');
       setComentario('');
@@ -3666,7 +3684,14 @@ const MovementModal = ({
     type: "button",
     onClick: () => {
       setTipo(t.id);
-      if (t.id === 'transferencia') setCategoria('Transferencia');else if (t.id === 'ingreso' && (categoria === 'Transferencia' || categoria === 'Comida')) setCategoria('Sueldo/Nómina');else if (t.id === 'gasto' && (categoria === 'Transferencia' || categoria === 'Sueldo/Nómina')) setCategoria('Comida');
+      if (t.id === 'transferencia') {
+        setCategoria('Transferencia');
+        if (cuentaDestino === 'acc-bbva') setCuentaDestino('acc-myinvestor');
+      } else if (t.id === 'ingreso' && (categoria === 'Transferencia' || categoria === 'Comida')) {
+        setCategoria('Sueldo/Nómina');
+      } else if (t.id === 'gasto' && (categoria === 'Transferencia' || categoria === 'Sueldo/Nómina')) {
+        setCategoria('Comida');
+      }
     },
     className: `py-2 rounded-xl text-xs font-bold transition-all ${tipo === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`
   }, t.label))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -3694,7 +3719,7 @@ const MovementModal = ({
     value: cuentaOrigen,
     onChange: e => setCuentaOrigen(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), tipo === 'ingreso' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -3703,7 +3728,7 @@ const MovementModal = ({
     value: cuentaDestino,
     onChange: e => setCuentaDestino(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), tipo === 'transferencia' && /*#__PURE__*/React.createElement("div", {
@@ -3714,7 +3739,7 @@ const MovementModal = ({
     value: cuentaOrigen,
     onChange: e => setCuentaOrigen(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -3723,7 +3748,7 @@ const MovementModal = ({
     value: cuentaDestino,
     onChange: e => setCuentaDestino(e.target.value),
     className: "w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-900"
-  }, (data.cuentas || []).filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
+  }, sortedCuentas.filter(c => c && c.activa).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
   }, c.nombre))))), tipo !== 'transferencia' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
