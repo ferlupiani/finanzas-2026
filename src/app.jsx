@@ -66,6 +66,7 @@ const Icon = ({ name, className = "w-5 h-5", ...props }) => {
     wallet: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />,
     creditCard: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm4 8h2m4 0h4" />,
     trendingUp: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />,
+    trendingDown: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />,
     arrowUpRight: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17L17 7M17 7H7M17 7V17" />,
     arrowDownLeft: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 7L7 17M7 17H17M7 17V7" />,
     transfer: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />,
@@ -640,7 +641,7 @@ const FinanceProvider = ({ children }) => {
     ahorroPct,
     gastoPct,
     inversionAmount,
-    cuentaIngreso = 'acc-bbva',
+    cuentaIngreso = 'acc-santander',
     cuentaInversion = 'acc-myinvestor'
   }) => {
     const totalIngreso = Object.values(incomes).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
@@ -885,7 +886,7 @@ const Navbar = ({ activeTab, setActiveTab, onOpenNewModal }) => {
             { id: 'dashboard', label: 'Dashboard', icon: 'home' },
             { id: 'sueldo', label: 'Motor Sueldo & Fijos', icon: 'zap' },
             { id: 'movimientos', label: 'Movimientos', icon: 'creditCard' },
-            { id: 'analitica', label: 'Analítica & Reportes', icon: 'chart' },
+            { id: 'analitica', label: 'Analítica & Varianza', icon: 'chart' },
             { id: 'ajustes', label: 'Ajustes', icon: 'settings' }
           ].map(tab => (
             <button
@@ -1343,7 +1344,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 };
 
 // ==========================================
-// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & INVERSIONES (MyInvestor)
+// ⚡ MOTOR DE SUELDO, GASTOS FIJOS & INVERSIONES (Cobro en Santander, Gastos en BBVA)
 // ==========================================
 const SueldoEngineView = ({ setActiveTab }) => {
   const {
@@ -1389,7 +1390,9 @@ const SueldoEngineView = ({ setActiveTab }) => {
   
   // Inversión mensual flexible (100, 200, 300 o personalizada)
   const [inversionAmount, setInversionAmount] = useState(data.config?.inversionFija || 200.00);
-  const [cuentaIngreso, setCuentaIngreso] = useState('acc-bbva');
+  
+  // Cuenta donde se cobra el sueldo: Santander por defecto
+  const [cuentaIngreso, setCuentaIngreso] = useState('acc-santander');
   const [cuentaInversion, setCuentaInversion] = useState(data.config?.cuentaInversionDefecto || 'acc-myinvestor');
 
   const [distributionResult, setDistributionResult] = useState(null);
@@ -1526,7 +1529,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Motor de Nóminas & Inversión Flexible</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Aporta a MyInvestor según tus ingresos mensuales (100€, 200€, 300€...) y gestiona gastos fijos.
+            Cobro en Santander, aportación a MyInvestor y disponible restante a gastos.
           </p>
         </div>
 
@@ -1561,7 +1564,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
             ¡Nómina y Transferencias Distribuidas en Firebase!
           </div>
           <p className="text-xs text-emerald-700 mb-3">
-            Se han añadido los ingresos y generado las transferencias automáticas para la fecha {formatDate(distributionResult.fecha)}.
+            Se han añadido los ingresos en Santander y generado las transferencias automáticas para la fecha {formatDate(distributionResult.fecha)}.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/70 p-3 rounded-xl border border-emerald-100">
             <div>
@@ -1744,7 +1747,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">Cuenta donde se cobra:</span>
+            <span className="text-xs text-slate-500 font-medium">Cuenta donde se cobra el sueldo:</span>
             <select
               value={cuentaIngreso}
               onChange={(e) => setCuentaIngreso(e.target.value)}
@@ -1766,7 +1769,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
             <div className="text-3xl font-extrabold mt-1 text-white font-sans">
               {formatCurrency(totalIngresoCalculado)}
             </div>
-            <p className="text-xs text-slate-400">Total nóminas a distribuir</p>
+            <p className="text-xs text-slate-400">Total nóminas a distribuir desde {sortedCuentas.find(c => c.id === cuentaIngreso)?.nombre || 'Santander'}</p>
 
             <div className="mt-5 space-y-2.5 text-xs">
               <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-white/10">
@@ -1827,7 +1830,7 @@ const SueldoEngineView = ({ setActiveTab }) => {
               <div className="flex items-center justify-between p-2.5 bg-white/10 rounded-xl border border-white/20">
                 <span className="flex items-center gap-2 font-bold text-amber-300">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  Disponible Gastos (BBVA)
+                  Disponible Gastos Corrientes
                 </span>
                 <span className="font-bold text-amber-300 font-sans">{formatCurrency(preview.gasto)}</span>
               </div>
@@ -2672,117 +2675,36 @@ const MovimientosView = ({ initialAccountFilter, onOpenNewModal, onEditModal }) 
 };
 
 // ==========================================
-// 📈 ANALÍTICA & REPORTES EJECUTIVOS & EXPORTADOR
+// 📈 ANALÍTICA & VARIANZA HISTÓRICA MES A MES (INTERACTIVA)
 // ==========================================
 const AnaliticaView = () => {
-  const { data, saldos, totalPatrimonio } = useFinance();
+  const { data, saldos, totalPatrimonio, totalInversion, totalPatrimonioAbsoluto } = useFinance();
 
-  const [periodoFilter, setPeriodoFilter] = useState('2026');
-  const [selectedSpecificMonth, setSelectedSpecificMonth] = useState('2026-08');
+  const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedAccountScope, setSelectedAccountScope] = useState('total-liquido');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
+  const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [showIrpfInChart, setShowIrpfInChart] = useState(false);
 
-  const availableMonths = useMemo(() => {
-    const months = new Set();
+  const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set();
     (data.movimientos || []).forEach(m => {
-      if (m && m.fecha && m.fecha.length >= 7) {
-        months.add(m.fecha.substring(0, 7));
+      if (m && m.fecha && m.fecha.length >= 4) {
+        years.add(m.fecha.substring(0, 4));
       }
     });
-    return Array.from(months).sort().reverse();
+    if (!years.has('2026')) years.add('2026');
+    return Array.from(years).sort().reverse();
   }, [data.movimientos]);
 
-  const analysisMovements = useMemo(() => {
-    return (data.movimientos || []).filter(m => {
-      if (!m || !m.fecha) return false;
-      const mMonth = m.fecha.substring(0, 7);
-
-      if (periodoFilter === '2026' && !m.fecha.startsWith('2026')) return false;
-      if (periodoFilter === 'mes' && mMonth !== selectedSpecificMonth) return false;
-      if (periodoFilter === '3m' && !availableMonths.slice(0, 3).includes(mMonth)) return false;
-      if (periodoFilter === '6m' && !availableMonths.slice(0, 6).includes(mMonth)) return false;
-
-      if (selectedCategoryFilter !== 'todas' && m.categoria !== selectedCategoryFilter) return false;
-
-      return true;
-    });
-  }, [data.movimientos, periodoFilter, selectedSpecificMonth, selectedCategoryFilter, availableMonths]);
-
-  const periodKpis = useMemo(() => {
-    let ingresos = 0;
-    let gastos = 0;
-    let transferencias = 0;
-
-    analysisMovements.forEach(m => {
-      const imp = parseFloat(m.importe) || 0;
-      if (m.tipo === 'ingreso') ingresos += imp;
-      if (m.tipo === 'gasto') gastos += imp;
-      if (m.tipo === 'transferencia') transferencias += imp;
-    });
-
-    const balance = ingresos - gastos;
-    const tasaAhorro = ingresos > 0 ? Math.max(0, Math.round((balance / ingresos) * 100)) : 0;
-    const diasEnPeriodo = periodoFilter === 'mes' ? 30 : (periodoFilter === '2026' ? 240 : 90);
-    const mediaGastoDiario = gastos / Math.max(1, diasEnPeriodo);
-
-    return { ingresos, gastos, transferencias, balance, tasaAhorro, mediaGastoDiario };
-  }, [analysisMovements, periodoFilter]);
-
-  const categoryExpenses = useMemo(() => {
-    const map = {};
-    let totalGasto = 0;
-
-    analysisMovements.forEach(m => {
-      if (m && m.tipo === 'gasto') {
-        const cat = m.categoria || 'Otros Gastos';
-        const imp = parseFloat(m.importe) || 0;
-        map[cat] = (map[cat] || 0) + imp;
-        totalGasto += imp;
-      }
-    });
-
-    return Object.entries(map)
-      .map(([categoria, importe]) => ({
-        categoria,
-        importe,
-        porcentaje: totalGasto > 0 ? Math.round((importe / totalGasto) * 100) : 0
-      }))
-      .sort((a, b) => b.importe - a.importe);
-  }, [analysisMovements]);
-
-  const monthlyComparison = useMemo(() => {
-    const map = {};
-
-    (data.movimientos || []).forEach(m => {
-      if (!m || !m.fecha || m.fecha.length < 7) return;
-      const monthKey = m.fecha.substring(0, 7);
-      if (!map[monthKey]) {
-        map[monthKey] = { mes: monthKey, ingresos: 0, gastos: 0, transferencias: 0 };
-      }
-      const imp = parseFloat(m.importe) || 0;
-      if (m.tipo === 'ingreso') map[monthKey].ingresos += imp;
-      if (m.tipo === 'gasto') map[monthKey].gastos += imp;
-      if (m.tipo === 'transferencia') map[monthKey].transferencias += imp;
-    });
-
-    const sorted = Object.values(map).sort((a, b) => a.mes.localeCompare(b.mes));
-    if (periodoFilter === '3m') return sorted.slice(-3);
-    if (periodoFilter === '6m') return sorted.slice(-6);
-    if (periodoFilter === '2026') return sorted.filter(m => m.mes.startsWith('2026'));
-    if (periodoFilter === 'mes') return sorted.filter(m => m.mes === selectedSpecificMonth);
-    return sorted;
-  }, [data.movimientos, periodoFilter, selectedSpecificMonth]);
-
-  const patrimonioEvolution = useMemo(() => {
-    const activeCuentasMap = {};
+  // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
+  const monthlyVarianceHistory = useMemo(() => {
+    // 1. Mapa de saldos iniciales
+    const runningBal = {};
     (data.cuentas || []).forEach(c => {
-      if (c && c.activa) {
-        activeCuentasMap[c.id] = {
-          saldo: c.saldoInicial || 0,
-          incluirEnTotal: c.incluirEnTotal !== false
-        };
-      }
+      if (c && c.id) runningBal[c.id] = c.saldoInicial || 0.0;
     });
 
     const movsSorted = [...(data.movimientos || [])].sort((a, b) => {
@@ -2795,161 +2717,124 @@ const AnaliticaView = () => {
       new Set(movsSorted.map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))
     ).filter(Boolean).sort();
 
-    const history = [];
+    const fullHistory = [];
+    let prevScopeSaldo = null;
 
     allMonths.forEach(mKey => {
       const monthMovs = movsSorted.filter(m => m && m.fecha && m.fecha.startsWith(mKey));
+      
+      let mesIngresos = 0;
+      let mesGastos = 0;
+
       monthMovs.forEach(m => {
         const imp = parseFloat(m.importe) || 0;
         if (m.tipo === 'gasto') {
-          if (activeCuentasMap[m.cuentaOrigen]) activeCuentasMap[m.cuentaOrigen].saldo -= imp;
+          if (runningBal[m.cuentaOrigen] !== undefined) runningBal[m.cuentaOrigen] -= imp;
         } else if (m.tipo === 'ingreso') {
-          if (activeCuentasMap[m.cuentaDestino]) activeCuentasMap[m.cuentaDestino].saldo += imp;
+          if (runningBal[m.cuentaDestino] !== undefined) runningBal[m.cuentaDestino] += imp;
         } else if (m.tipo === 'transferencia') {
-          if (activeCuentasMap[m.cuentaOrigen]) activeCuentasMap[m.cuentaOrigen].saldo -= imp;
-          if (activeCuentasMap[m.cuentaDestino]) activeCuentasMap[m.cuentaDestino].saldo += imp;
+          if (runningBal[m.cuentaOrigen] !== undefined) runningBal[m.cuentaOrigen] -= imp;
+          if (runningBal[m.cuentaDestino] !== undefined) runningBal[m.cuentaDestino] += imp;
+        }
+
+        // Ingresos/gastos específicos del scope seleccionado
+        if (selectedAccountScope === 'total-liquido') {
+          const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+          const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+          if (m.tipo === 'gasto' && origAcc?.incluirEnTotal !== false) mesGastos += imp;
+          if (m.tipo === 'ingreso' && destAcc?.incluirEnTotal !== false) mesIngresos += imp;
+        } else if (selectedAccountScope === 'total-consolidado') {
+          if (m.tipo === 'gasto') mesGastos += imp;
+          if (m.tipo === 'ingreso') mesIngresos += imp;
+        } else if (selectedAccountScope === 'inversiones-total') {
+          if (['acc-myinvestor', 'acc-trade'].includes(m.cuentaOrigen) && m.tipo === 'gasto') mesGastos += imp;
+          if (['acc-myinvestor', 'acc-trade'].includes(m.cuentaDestino) && m.tipo === 'ingreso') mesIngresos += imp;
+        } else {
+          if (m.cuentaOrigen === selectedAccountScope && m.tipo === 'gasto') mesGastos += imp;
+          if (m.cuentaDestino === selectedAccountScope && m.tipo === 'ingreso') mesIngresos += imp;
         }
       });
 
-      const totalDisponible = Object.values(activeCuentasMap)
-        .filter(c => c.incluirEnTotal)
-        .reduce((sum, c) => sum + c.saldo, 0);
+      // Calcular saldo al cierre del mes según el scope
+      let currentScopeSaldo = 0;
+      if (selectedAccountScope === 'total-liquido') {
+        currentScopeSaldo = (data.cuentas || [])
+          .filter(c => c && c.activa && c.incluirEnTotal !== false)
+          .reduce((sum, c) => sum + (runningBal[c.id] || 0), 0);
+      } else if (selectedAccountScope === 'total-consolidado') {
+        currentScopeSaldo = (data.cuentas || [])
+          .filter(c => c && c.activa)
+          .reduce((sum, c) => sum + (runningBal[c.id] || 0), 0);
+      } else if (selectedAccountScope === 'inversiones-total') {
+        currentScopeSaldo = (runningBal['acc-myinvestor'] || 0) + (runningBal['acc-trade'] || 0);
+      } else {
+        currentScopeSaldo = runningBal[selectedAccountScope] || 0;
+      }
 
-      const totalConIrpf = Object.values(activeCuentasMap)
-        .reduce((sum, c) => sum + c.saldo, 0);
+      const diff = prevScopeSaldo !== null ? (currentScopeSaldo - prevScopeSaldo) : 0;
+      const diffPct = (prevScopeSaldo !== null && prevScopeSaldo !== 0) ? (diff / Math.abs(prevScopeSaldo)) * 100 : 0;
 
-      history.push({
+      fullHistory.push({
         mes: mKey,
-        total: showIrpfInChart ? totalConIrpf : totalDisponible,
-        totalDisponible,
-        totalConIrpf
+        saldo: currentScopeSaldo,
+        prevSaldo: prevScopeSaldo,
+        diff,
+        diffPct,
+        ingresos: mesIngresos,
+        gastos: mesGastos,
+        balance: mesIngresos - mesGastos,
+        movCount: monthMovs.length
       });
+
+      prevScopeSaldo = currentScopeSaldo;
     });
 
-    if (periodoFilter === '3m') return history.slice(-3);
-    if (periodoFilter === '6m') return history.slice(-6);
-    if (periodoFilter === '2026') return history.filter(h => h.mes.startsWith('2026'));
-    if (periodoFilter === 'mes') return history.filter(h => h.mes === selectedSpecificMonth);
-    return history;
-  }, [data.cuentas, data.movimientos, periodoFilter, selectedSpecificMonth, showIrpfInChart]);
+    // Filtrar por año seleccionado
+    if (selectedYear !== 'todos') {
+      return fullHistory.filter(h => h.mes.startsWith(selectedYear));
+    }
+    return fullHistory;
+  }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear]);
 
-  const lineChartData = useMemo(() => {
-    if (patrimonioEvolution.length === 0) return { path: '', area: '', points: [], width: 600, height: 220 };
+  // Puntos del gráfico SVG
+  const chartGraphData = useMemo(() => {
+    if (monthlyVarianceHistory.length === 0) return { path: '', area: '', points: [], width: 700, height: 240 };
 
-    const values = patrimonioEvolution.map(d => d.total);
-    const minVal = Math.min(...values, 0);
-    const maxVal = Math.max(...values, 1000);
-    const range = maxVal - minVal || 1;
+    const values = monthlyVarianceHistory.map(d => d.saldo);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const margin = (maxVal - minVal) * 0.1 || 100;
+    const range = (maxVal + margin) - (minVal - margin) || 1;
 
-    const width = 600;
-    const height = 220;
-    const padding = 30;
+    const width = 700;
+    const height = 240;
+    const paddingX = 45;
+    const paddingTop = 30;
+    const paddingBottom = 40;
 
-    const points = patrimonioEvolution.map((d, idx) => {
-      const x = padding + (idx / Math.max(1, patrimonioEvolution.length - 1)) * (width - 2 * padding);
-      const y = height - padding - ((d.total - minVal) / range) * (height - 2 * padding);
+    const points = monthlyVarianceHistory.map((d, idx) => {
+      const x = paddingX + (idx / Math.max(1, monthlyVarianceHistory.length - 1)) * (width - 2 * paddingX);
+      const y = height - paddingBottom - ((d.saldo - (minVal - margin)) / range) * (height - paddingTop - paddingBottom);
       return { x, y, ...d };
     });
 
     const path = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '');
-    const area = points.length > 0 ? `${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z` : '';
+    const area = points.length > 0
+      ? `${path} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`
+      : '';
 
-    return { path, area, points, width, height };
-  }, [patrimonioEvolution]);
+    return { path, area, points, width, height, minVal, maxVal };
+  }, [monthlyVarianceHistory]);
 
-  const maxMonthExpense = useMemo(() => {
-    return Math.max(...monthlyComparison.map(m => Math.max(m.ingresos, m.gastos)), 1000);
-  }, [monthlyComparison]);
+  const scopeLabel = useMemo(() => {
+    if (selectedAccountScope === 'total-liquido') return 'Patrimonio Líquido Disponible';
+    if (selectedAccountScope === 'total-consolidado') return 'Patrimonio Total Consolidado';
+    if (selectedAccountScope === 'inversiones-total') return 'Cartera de Inversiones (MyInvestor + Trade)';
+    const found = (data.cuentas || []).find(c => c.id === selectedAccountScope);
+    return found ? `Cuenta: ${found.nombre}` : 'Cuenta';
+  }, [selectedAccountScope, data.cuentas]);
 
-  const handleExportReplicatedExcel = () => {
-    const targetMonth = periodoFilter === 'mes' ? selectedSpecificMonth : '2026-08';
-    const monthName = formatMonthName(targetMonth);
-    const monthMovs = (data.movimientos || []).filter(m => m && m.fecha && m.fecha.startsWith(targetMonth));
-
-    let excelHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${monthName}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
-        <style>
-          th { background-color: #1e293b; color: #ffffff; font-weight: bold; font-family: Calibri, sans-serif; text-align: center; }
-          td { font-family: Calibri, sans-serif; font-size: 11pt; }
-          .header-main { background-color: #0f172a; color: #f8fafc; font-size: 14pt; font-weight: bold; text-align: center; }
-          .num { text-align: right; }
-          .bold { font-weight: bold; }
-          .ingreso { color: #059669; font-weight: bold; }
-          .gasto { color: #dc2626; }
-        </style>
-      </head>
-      <body>
-        <table border="1">
-          <tr><td colspan="6" class="header-main">FINANZAS 2026 - HOJA MENSUAL: ${monthName.toUpperCase()}</td></tr>
-          <tr><td colspan="6"></td></tr>
-          <tr>
-            <th>CUENTA</th>
-            <th>SALDO INICIAL</th>
-            <th>MOVIMIENTOS</th>
-            <th>SALDO FINAL</th>
-            <th colspan="2">CONFIGURACION</th>
-          </tr>
-    `;
-
-    sortCuentas(data.cuentas || []).forEach(c => {
-      const saldoIni = c.saldoInicial || 0;
-      const saldoAct = saldos[c.id] || 0;
-      const movNeto = saldoAct - saldoIni;
-      excelHtml += `
-        <tr>
-          <td class="bold">${c.nombre}</td>
-          <td class="num">${saldoIni.toFixed(2)} €</td>
-          <td class="num">${movNeto.toFixed(2)} €</td>
-          <td class="num bold">${saldoAct.toFixed(2)} €</td>
-          <td colspan="2">${c.incluirEnTotal !== false ? 'Computable en Total' : (c.tipo === 'inversion' ? 'Cartera Inversión' : 'Sabadell IRPF (Separado)')}</td>
-        </tr>
-      `;
-    });
-
-    excelHtml += `
-          <tr><td colspan="6"></td></tr>
-          <tr><td colspan="6" class="header-main">DIARIO DE MOVIMIENTOS DEL MES (${monthMovs.length} transacciones)</td></tr>
-          <tr>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Cuenta</th>
-            <th>Categoría</th>
-            <th>Monto (€)</th>
-            <th>Comentario</th>
-          </tr>
-    `;
-
-    monthMovs.forEach(m => {
-      const orig = (data.cuentas || []).find(c => c.id === m.cuentaOrigen)?.nombre || '';
-      const dest = (data.cuentas || []).find(c => c.id === m.cuentaDestino)?.nombre || '';
-      const cuentaStr = m.tipo === 'transferencia' ? `${orig} -> ${dest}` : (m.tipo === 'gasto' ? orig : dest);
-      const montoSign = m.tipo === 'gasto' ? -m.importe : m.importe;
-
-      excelHtml += `
-        <tr>
-          <td>${formatDate(m.fecha)}</td>
-          <td class="bold">${m.tipo.toUpperCase()}</td>
-          <td>${cuentaStr}</td>
-          <td>${m.categoria || ''}</td>
-          <td class="num ${m.tipo === 'ingreso' ? 'ingreso' : (m.tipo === 'gasto' ? 'gasto' : '')}">${montoSign.toFixed(2)} €</td>
-          <td>${m.comentario || ''}</td>
-        </tr>
-      `;
-    });
-
-    excelHtml += `</table></body></html>`;
-
-    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Finanzas_${monthName.replace(' ', '_')}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
@@ -2957,11 +2842,13 @@ const AnaliticaView = () => {
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 mb-1">
-            <Icon name="sparkles" className="w-3.5 h-3.5 text-blue-600" />
-            Motor de Inteligencia & Análisis Financiero
+            <Icon name="chart" className="w-3.5 h-3.5 text-blue-600" />
+            Recorrido Histórico & Varianza Mes a Mes
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Analítica Financiera Avanzada</h2>
-          <p className="text-xs text-slate-500">Métricas completas, evolución de patrimonio y reportes ejecutivos</p>
+          <h2 className="text-xl font-bold text-slate-900">Analítica & Varianza por Cuenta</h2>
+          <p className="text-xs text-slate-500">
+            Observa el saldo con el que cerraste cada mes, las variaciones netas y el recorrido de tus cuentas.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -2972,227 +2859,297 @@ const AnaliticaView = () => {
             <Icon name="presentation" className="w-4 h-4" />
             Informe Ejecutivo
           </button>
-
-          <button
-            onClick={handleExportReplicatedExcel}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
-          >
-            <Icon name="table" className="w-4 h-4" />
-            Descargar Excel Replicado
-          </button>
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">Período:</span>
-          {[
-            { id: '2026', label: 'Año 2026' },
-            { id: 'mes', label: 'Mes Específico' },
-            { id: '3m', label: 'Últimos 3m' },
-            { id: '6m', label: 'Últimos 6m' },
-            { id: 'all', label: 'Todo el Histórico' }
-          ].map(btn => (
-            <button
-              key={btn.id}
-              onClick={() => setPeriodoFilter(btn.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                periodoFilter === btn.id
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
-
-          {periodoFilter === 'mes' && (
+      {/* SELECTORES DE ÁMBITO (CUENTA / AÑO) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">Cuenta / Ámbito a analizar:</label>
             <select
-              value={selectedSpecificMonth}
-              onChange={(e) => setSelectedSpecificMonth(e.target.value)}
-              className="text-xs font-bold bg-blue-50 border border-blue-300 text-blue-900 rounded-xl px-3 py-1.5 animate-fadeIn"
+              value={selectedAccountScope}
+              onChange={(e) => setSelectedAccountScope(e.target.value)}
+              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
             >
-              {availableMonths.map(m => (
-                <option key={m} value={m}>{formatMonthName(m)}</option>
-              ))}
+              <optgroup label="Totales">
+                <option value="total-liquido">💰 Patrimonio Líquido (Operativo)</option>
+                <option value="total-consolidado">🌐 Total Consolidado (Con IRPF e Inversión)</option>
+                <option value="inversiones-total">💼 Cartera Inversión (MyInvestor + Trade)</option>
+              </optgroup>
+              <optgroup label="Cuentas Individuales">
+                {sortedCuentas.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre} {c.incluirEnTotal === false ? '(Separada)' : ''}
+                  </option>
+                ))}
+              </optgroup>
             </select>
-          )}
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">Año:</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>Año {y}</option>
+              ))}
+              <option value="todos">Todo el Histórico</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">Categoría:</span>
-          <select
-            value={selectedCategoryFilter}
-            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800"
-          >
-            <option value="todas">Todas las categorías</option>
-            {(data.categorias || []).map(cat => (
-              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
-            ))}
-          </select>
-        </div>
+        {/* Resumen del punto activo / hover */}
+        {activePoint && (
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center gap-4 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase">{formatMonthName(activePoint.mes)}</span>
+              <span className="text-base font-extrabold text-slate-900 font-sans">
+                {formatCurrency(activePoint.saldo)}
+              </span>
+            </div>
+
+            {activePoint.prevSaldo !== null && (
+              <div className="border-l border-slate-200 pl-3">
+                <span className="text-[10px] text-slate-400 block font-semibold">Varianza vs mes ant.</span>
+                <span className={`font-bold font-sans flex items-center gap-1 ${
+                  activePoint.diff > 0 ? 'text-emerald-600' :
+                  activePoint.diff < 0 ? 'text-rose-600' : 'text-slate-500'
+                }`}>
+                  {activePoint.diff > 0 ? `+${formatCurrency(activePoint.diff)}` : formatCurrency(activePoint.diff)}
+                  <span className="text-[10px]">({activePoint.diff > 0 ? '+' : ''}{activePoint.diffPct.toFixed(1)}%)</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-          <span className="text-xs font-medium text-slate-400">Ingresos Totales</span>
-          <div className="text-2xl font-extrabold text-emerald-600 font-sans">
-            +{formatCurrency(periodKpis.ingresos)}
-          </div>
-          <span className="text-[11px] text-slate-500 block">Nóminas y otros cobros</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-          <span className="text-xs font-medium text-slate-400">Gastos Totales</span>
-          <div className="text-2xl font-extrabold text-rose-600 font-sans">
-            -{formatCurrency(periodKpis.gastos)}
-          </div>
-          <span className="text-[11px] text-slate-500 block">Media: {formatCurrency(periodKpis.mediaGastoDiario)} / día</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-          <span className="text-xs font-medium text-slate-400">Ahorro Neto</span>
-          <div className={`text-2xl font-extrabold font-sans ${periodKpis.balance >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-            {formatCurrency(periodKpis.balance)}
-          </div>
-          <span className="text-[11px] text-slate-500 block">Balance del período</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-          <span className="text-xs font-medium text-slate-400">Tasa de Ahorro</span>
-          <div className="text-2xl font-extrabold text-sky-600 font-sans">
-            {periodKpis.tasaAhorro}%
-          </div>
-          <span className="text-[11px] text-slate-500 block">Porcentaje de ingresos guardado</span>
-        </div>
-      </div>
-
-      {/* Gráfico 1: Evolución del Patrimonio */}
+      {/* GRÁFICA INTERACTIVA CON TOOLTIP ON HOVER */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Icon name="trendingUp" className="w-4 h-4 text-blue-600" />
-              {showIrpfInChart ? 'Evolución del Patrimonio Total Consolidado (€)' : 'Evolución del Patrimonio Neto Disponible (€)'}
+              Recorrido de {scopeLabel}
             </h3>
             <p className="text-xs text-slate-500">
-              {showIrpfInChart ? 'Incluye todas las cuentas activas (con Inversión e IRPF)' : 'Solo cuentas líquidas operativas (excluye Inversiones y Sabadell IRPF)'}
+              Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
-              <button
-                onClick={() => setShowIrpfInChart(false)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
-                  !showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Solo Líquido
-              </button>
-              <button
-                onClick={() => setShowIrpfInChart(true)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
-                  showIrpfInChart ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Consolidado
-              </button>
-            </div>
-
-            {lineChartData.points.length > 0 && (
-              <span className="text-sm font-bold text-slate-900 font-sans">
-                Último: {formatCurrency(lineChartData.points[lineChartData.points.length - 1].total)}
-              </span>
-            )}
-          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+            {monthlyVarianceHistory.length} Meses computados
+          </span>
         </div>
 
-        <div className="w-full overflow-x-auto">
-          <svg viewBox={`0 0 ${lineChartData.width || 600} ${lineChartData.height || 220}`} className="w-full h-52">
+        <div className="relative w-full overflow-x-auto select-none pt-2 pb-1">
+          <svg
+            viewBox={`0 0 ${chartGraphData.width || 700} ${chartGraphData.height || 240}`}
+            className="w-full h-64 overflow-visible"
+          >
             <defs>
-              <linearGradient id="patrimonioGrad2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+              <linearGradient id="varianceGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
                 <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
-            <line x1="30" y1="30" x2="570" y2="30" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="30" y1="110" x2="570" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="30" y1="190" x2="570" y2="190" stroke="#e2e8f0" strokeWidth="1" />
+            {/* Líneas de cuadrícula */}
+            <line x1="45" y1="30" x2="655" y2="30" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="45" y1="115" x2="655" y2="115" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="45" y1="200" x2="655" y2="200" stroke="#e2e8f0" strokeWidth="1" />
 
-            {lineChartData.area && <path d={lineChartData.area} fill="url(#patrimonioGrad2)" />}
-            {lineChartData.path && <path d={lineChartData.path} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />}
+            {/* Área y Línea */}
+            {chartGraphData.area && <path d={chartGraphData.area} fill="url(#varianceGrad)" />}
+            {chartGraphData.path && <path d={chartGraphData.path} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
 
-            {lineChartData.points.map((p, i) => (
-              <g key={i}>
-                <circle cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke="#2563eb" strokeWidth="2.5" />
-                <text x={p.x} y="210" textAnchor="middle" fontSize="9" fill="#64748b" fontWeight="600">
-                  {formatMonthName(p.mes).split(' ')[0].substring(0, 3)}
-                </text>
-              </g>
-            ))}
+            {/* Línea vertical en hover */}
+            {hoveredPoint && (
+              <line
+                x1={hoveredPoint.x}
+                y1="20"
+                x2={hoveredPoint.x}
+                y2="200"
+                stroke="#94a3b8"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+              />
+            )}
+
+            {/* Puntos / Bolitas con interactividad */}
+            {chartGraphData.points.map((p, i) => {
+              const isHovered = hoveredPoint && hoveredPoint.mes === p.mes;
+
+              return (
+                <g
+                  key={i}
+                  className="cursor-pointer transition-transform"
+                  onMouseEnter={() => setHoveredPoint(p)}
+                  onClick={() => setHoveredPoint(p)}
+                >
+                  {/* Halo invisible para facilitar hover táctil */}
+                  <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
+
+                  {/* Halo visible al seleccionar */}
+                  {isHovered && (
+                    <circle cx={p.x} cy={p.y} r="9" fill="#93c5fd" opacity="0.5" className="animate-ping" />
+                  )}
+
+                  {/* Círculo del punto */}
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isHovered ? "6" : "4.5"}
+                    fill="#ffffff"
+                    stroke="#2563eb"
+                    strokeWidth={isHovered ? "3.5" : "2.5"}
+                  />
+
+                  {/* Etiqueta del mes abajo */}
+                  <text
+                    x={p.x}
+                    y="222"
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill={isHovered ? "#0f172a" : "#64748b"}
+                    fontWeight={isHovered ? "800" : "600"}
+                  >
+                    {formatMonthName(p.mes).split(' ')[0].substring(0, 3)}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
+
+          {/* Tooltip flotante interactivo */}
+          {hoveredPoint && (
+            <div
+              className="absolute pointer-events-none bg-slate-900 text-white p-3 rounded-2xl shadow-xl text-xs z-30 border border-slate-700 animate-fadeIn"
+              style={{
+                left: `${(hoveredPoint.x / (chartGraphData.width || 700)) * 100}%`,
+                top: `${(hoveredPoint.y / (chartGraphData.height || 240)) * 100 - 30}%`,
+                transform: 'translate(-50%, -100%)'
+              }}
+            >
+              <div className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3">
+                <span>{formatMonthName(hoveredPoint.mes)}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{hoveredPoint.movCount} movs</span>
+              </div>
+
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-slate-400">Saldo final:</span>
+                <span className="font-extrabold text-white font-sans text-sm">
+                  {formatCurrency(hoveredPoint.saldo)}
+                </span>
+              </div>
+
+              {hoveredPoint.prevSaldo !== null && (
+                <div className="flex items-baseline justify-between gap-4 mt-1">
+                  <span className="text-slate-400">Varianza:</span>
+                  <span className={`font-bold font-sans ${
+                    hoveredPoint.diff > 0 ? 'text-emerald-400' :
+                    hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'
+                  }`}>
+                    {hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff)}
+                    <span className="text-[10px] ml-1">({hoveredPoint.diff > 0 ? '+' : ''}{hoveredPoint.diffPct.toFixed(1)}%)</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 2: Comparativa de Ingresos vs Gastos */}
-        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Icon name="chart" className="w-4 h-4 text-emerald-600" />
-            Comparativa Mensual (Ingresos vs Gastos)
-          </h3>
-
-          <div className="space-y-3 pt-2">
-            {monthlyComparison.map(m => {
-              const ingPct = Math.round((m.ingresos / maxMonthExpense) * 100);
-              const gastPct = Math.round((m.gastos / maxMonthExpense) * 100);
-
-              return (
-                <div key={m.mes} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>{formatMonthName(m.mes)}</span>
-                    <span className="text-[11px] text-slate-400 font-sans">
-                      +{formatCurrency(m.ingresos)} / -{formatCurrency(m.gastos)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 h-3.5 bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-100">
-                    <div className="bg-emerald-500 rounded-full transition-all" style={{ width: `${ingPct}%` }}></div>
-                    <div className="bg-rose-400 rounded-full transition-all" style={{ width: `${gastPct}%` }}></div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* TABLA DE RECORRIDO Y VARIANZA MES A MES (ESTILO EXCEL) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Icon name="table" className="w-4 h-4 text-slate-700" />
+              Tabla de Cierres & Varianza Mensual ({scopeLabel})
+            </h3>
+            <p className="text-xs text-slate-500">Histórico numérico mes a mes con balances de entrada, salida y cambio neto</p>
           </div>
         </div>
 
-        {/* Gráfico 3: Distribución por Categorías */}
-        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Icon name="pieChart" className="w-4 h-4 text-amber-600" />
-            Distribución de Gastos por Categoría
-          </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/80">
+                <th className="p-3.5 pl-5">Mes</th>
+                <th className="p-3.5 text-right">Saldo al Cierre</th>
+                <th className="p-3.5 text-right">Varianza Neta (€)</th>
+                <th className="p-3.5 text-right">Varianza (%)</th>
+                <th className="p-3.5 text-right">Ingresos Mes</th>
+                <th className="p-3.5 text-right">Gastos Mes</th>
+                <th className="p-3.5 text-right pr-5">Ahorro / Flujo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {monthlyVarianceHistory.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-slate-400">
+                    No hay registros en este período para la cuenta seleccionada.
+                  </td>
+                </tr>
+              ) : (
+                monthlyVarianceHistory.map(row => {
+                  const isPositiveDiff = row.diff > 0;
+                  const isNegativeDiff = row.diff < 0;
 
-          <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-            {categoryExpenses.slice(0, 10).map((cat, idx) => (
-              <div key={cat.categoria} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-5 h-5 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
-                    {idx + 1}
-                  </span>
-                  <span className="font-bold text-slate-800 truncate">{cat.categoria}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-400 font-medium">{cat.porcentaje}%</span>
-                  <span className="font-bold text-slate-900 font-sans">{formatCurrency(cat.importe)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                  return (
+                    <tr
+                      key={row.mes}
+                      onMouseEnter={() => setHoveredPoint(chartGraphData.points.find(p => p.mes === row.mes))}
+                      className="hover:bg-blue-50/40 transition-colors"
+                    >
+                      <td className="p-3.5 pl-5 font-bold text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        {formatMonthName(row.mes)}
+                      </td>
+                      <td className="p-3.5 text-right font-bold text-slate-900 font-sans">
+                        {formatCurrency(row.saldo)}
+                      </td>
+                      <td className="p-3.5 text-right font-sans font-bold">
+                        {row.prevSaldo === null ? (
+                          <span className="text-slate-400 font-normal">Inicial</span>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs ${
+                            isPositiveDiff ? 'bg-emerald-50 text-emerald-700 font-bold' :
+                            isNegativeDiff ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-500'
+                          }`}>
+                            {isPositiveDiff ? `+${formatCurrency(row.diff)}` : formatCurrency(row.diff)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-right font-sans">
+                        {row.prevSaldo === null ? (
+                          <span className="text-slate-400">-</span>
+                        ) : (
+                          <span className={isPositiveDiff ? 'text-emerald-700 font-bold' : isNegativeDiff ? 'text-rose-700 font-bold' : 'text-slate-500'}>
+                            {isPositiveDiff ? '+' : ''}{row.diffPct.toFixed(1)}%
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-right text-emerald-600 font-sans font-semibold">
+                        +{formatCurrency(row.ingresos)}
+                      </td>
+                      <td className="p-3.5 text-right text-rose-600 font-sans font-semibold">
+                        -{formatCurrency(row.gastos)}
+                      </td>
+                      <td className={`p-3.5 text-right pr-5 font-bold font-sans ${row.balance >= 0 ? 'text-blue-700' : 'text-rose-700'}`}>
+                        {row.balance > 0 ? `+${formatCurrency(row.balance)}` : formatCurrency(row.balance)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -3208,7 +3165,7 @@ const AnaliticaView = () => {
                 <div>
                   <h3 className="text-base font-bold">Informe Financiero Ejecutivo</h3>
                   <p className="text-xs text-slate-300">
-                    Período: {periodoFilter === 'mes' ? formatMonthName(selectedSpecificMonth) : 'Año 2026'}
+                    Ámbito: {scopeLabel} • Año: {selectedYear}
                   </p>
                 </div>
               </div>
@@ -3224,58 +3181,27 @@ const AnaliticaView = () => {
               <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
                 <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                   <Icon name="sparkles" className="w-4 h-4 text-blue-600" />
-                  Conclusión del Período
+                  Diagnóstico Patrimonial
                 </span>
                 <p className="text-xs text-blue-950 leading-relaxed">
-                  Durante el período seleccionado has ingresado un total de <strong>{formatCurrency(periodKpis.ingresos)}</strong> y realizado gastos por <strong>{formatCurrency(periodKpis.gastos)}</strong>, lo que representa una tasa de ahorro del <strong>{periodKpis.tasaAhorro}%</strong> ({formatCurrency(periodKpis.balance)} guardados). Tu patrimonio líquido disponible se sitúa en <strong>{formatCurrency(totalPatrimonio)}</strong>.
+                  Tu patrimonio líquido disponible operativo asciende a <strong>{formatCurrency(totalPatrimonio)}</strong>, complementado con <strong>{formatCurrency(totalInversion)}</strong> en tu cartera de inversión conjunta (MyInvestor + Trade Republic) y <strong>{formatCurrency(saldos['acc-sab-irpf'] || 0)}</strong> en Sabadell IRPF, sumando un patrimonio total consolidado de <strong>{formatCurrency(totalPatrimonioAbsoluto)}</strong>.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block font-medium">Ingreso Promedio</span>
-                  <span className="text-sm font-bold text-emerald-600 font-sans">
-                    {formatCurrency(periodKpis.ingresos)}
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block font-medium">Gasto Diario</span>
-                  <span className="text-sm font-bold text-rose-600 font-sans">
-                    {formatCurrency(periodKpis.mediaGastoDiario)}/día
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block font-medium">Categoría Principal</span>
-                  <span className="text-sm font-bold text-slate-900 truncate block">
-                    {categoryExpenses[0]?.categoria || 'N/A'}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 mb-2.5">Top Categorías de Gasto</h4>
-                <div className="space-y-2">
-                  {categoryExpenses.slice(0, 5).map((c, i) => (
-                    <div key={c.categoria} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
-                      <span className="font-bold text-slate-800">{i + 1}. {c.categoria}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-400">{c.porcentaje}% del total</span>
-                        <span className="font-bold text-slate-900 font-sans">{formatCurrency(c.importe)}</span>
-                      </div>
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-900">Desglose por Cuentas Actualizadas</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {sortedCuentas.map(c => (
+                    <div key={c.id} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{c.nombre}</span>
+                      <span className="font-extrabold text-slate-900 font-sans">{formatCurrency(saldos[c.id] || 0)}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-              <button
-                onClick={handleExportReplicatedExcel}
-                className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900"
-              >
-                <Icon name="download" className="w-4 h-4" />
-                Descargar Plantilla Excel
-              </button>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
               <button
                 onClick={() => setIsReportModalOpen(false)}
                 className="bg-slate-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm"
