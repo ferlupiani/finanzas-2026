@@ -2694,6 +2694,7 @@ const AnaliticaView = () => {
   const { data, saldos, totalPatrimonio, totalInversion, totalPatrimonioAbsoluto } = useFinance();
 
   const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedMonth, setSelectedMonth] = useState('todos');
   const [selectedAccountScope, setSelectedAccountScope] = useState('total-liquido');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -2711,6 +2712,18 @@ const AnaliticaView = () => {
     if (!years.has('2026')) years.add('2026');
     return Array.from(years).sort().reverse();
   }, [data.movimientos]);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.length >= 7) {
+        if (selectedYear === 'todos' || m.fecha.startsWith(selectedYear)) {
+          months.add(m.fecha.substring(0, 7));
+        }
+      }
+    });
+    return Array.from(months).sort().reverse();
+  }, [data.movimientos, selectedYear]);
 
   // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
   const monthlyVarianceHistory = useMemo(() => {
@@ -2851,14 +2864,32 @@ const AnaliticaView = () => {
 
   const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
 
-  // Función de Exportación a Excel (.xls) completo con tablas formateadas
+  // Filas a mostrar en la tabla según el filtro de mes
+  const displayedVarianceRows = useMemo(() => {
+    if (selectedMonth !== 'todos') {
+      return monthlyVarianceHistory.filter(row => row.mes === selectedMonth);
+    }
+    return monthlyVarianceHistory;
+  }, [monthlyVarianceHistory, selectedMonth]);
+
+  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses o anual
   const handleExportExcel = () => {
     const scopeName = scopeLabel.toUpperCase();
+    const isSingleMonth = selectedMonth !== 'todos';
+    const periodTitle = isSingleMonth ? formatMonthName(selectedMonth).toUpperCase() : `AÑO ${selectedYear.toUpperCase()}`;
+
     const movsList = (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
+      if (isSingleMonth) {
+        return m.fecha.startsWith(selectedMonth);
+      }
       if (selectedYear !== 'todos' && !m.fecha.startsWith(selectedYear)) return false;
       return true;
     });
+
+    const varianceList = isSingleMonth
+      ? monthlyVarianceHistory.filter(h => h.mes === selectedMonth)
+      : monthlyVarianceHistory;
 
     let excelHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -2877,7 +2908,7 @@ const AnaliticaView = () => {
       </head>
       <body>
         <table border="1">
-          <tr><td colspan="7" class="header-main">FINANZAS 2026 - INFORME Y VARIANZA: ${scopeName} (${selectedYear})</td></tr>
+          <tr><td colspan="7" class="header-main">FINANZAS 2026 - INFORME Y VARIANZA: ${scopeName} (${periodTitle})</td></tr>
           <tr><td colspan="7"></td></tr>
           <tr><td colspan="7" class="section-title">1. RESUMEN DE SALDOS POR CUENTA</td></tr>
           <tr>
@@ -2908,7 +2939,7 @@ const AnaliticaView = () => {
 
     excelHtml += `
           <tr><td colspan="7"></td></tr>
-          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA MES A MES (${scopeName})</td></tr>
+          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle})</td></tr>
           <tr>
             <th>Mes</th>
             <th>Saldo al Cierre</th>
@@ -2920,7 +2951,7 @@ const AnaliticaView = () => {
           </tr>
     `;
 
-    monthlyVarianceHistory.forEach(row => {
+    varianceList.forEach(row => {
       const isPos = row.diff >= 0;
       excelHtml += `
         <tr>
@@ -2978,11 +3009,12 @@ const AnaliticaView = () => {
       </html>
     `;
 
+    const filePeriod = isSingleMonth ? selectedMonth : selectedYear;
     const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Finanzas_2026_${selectedYear}_${selectedAccountScope}.xls`;
+    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -3003,14 +3035,14 @@ const AnaliticaView = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Recuperado: Exportar Excel (.xls) */}
+          {/* Botón: Exportar Excel (.xls) para el mes/año seleccionado */}
           <button
             onClick={handleExportExcel}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
-            title="Descargar hoja de cálculo Excel completa con históricos y movimientos"
+            title={`Descargar hoja de cálculo Excel de ${selectedMonth !== 'todos' ? formatMonthName(selectedMonth) : selectedYear}`}
           >
             <Icon name="table" className="w-4 h-4" />
-            Exportar Excel (.xls)
+            Exportar Excel {selectedMonth !== 'todos' ? `(${formatMonthName(selectedMonth)})` : '(.xls)'}
           </button>
 
           <button
@@ -3023,7 +3055,7 @@ const AnaliticaView = () => {
         </div>
       </div>
 
-      {/* SELECTORES DE ÁMBITO (CUENTA / AÑO) */}
+      {/* SELECTORES DE ÁMBITO (CUENTA / AÑO / MES) */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div>
@@ -3052,13 +3084,30 @@ const AnaliticaView = () => {
             <label className="text-[11px] font-bold text-slate-500 block mb-1">Año:</label>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                setSelectedMonth('todos');
+              }}
               className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
             >
               {availableYears.map(y => (
                 <option key={y} value={y}>Año {y}</option>
               ))}
               <option value="todos">Todo el Histórico</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">Mes:</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
+            >
+              <option value="todos">📅 Todos los meses {selectedYear !== 'todos' ? `(${selectedYear})` : ''}</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonthName(m)}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -3259,14 +3308,14 @@ const AnaliticaView = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {monthlyVarianceHistory.length === 0 ? (
+              {displayedVarianceRows.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-slate-400">
                     No hay registros en este período para la cuenta seleccionada.
                   </td>
                 </tr>
               ) : (
-                monthlyVarianceHistory.map(row => {
+                displayedVarianceRows.map(row => {
                   const isPositiveDiff = row.diff > 0;
                   const isNegativeDiff = row.diff < 0;
 

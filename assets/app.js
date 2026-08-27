@@ -2765,6 +2765,7 @@ const AnaliticaView = () => {
     totalPatrimonioAbsoluto
   } = useFinance();
   const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedMonth, setSelectedMonth] = useState('todos');
   const [selectedAccountScope, setSelectedAccountScope] = useState('total-liquido');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -2780,6 +2781,17 @@ const AnaliticaView = () => {
     if (!years.has('2026')) years.add('2026');
     return Array.from(years).sort().reverse();
   }, [data.movimientos]);
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    (data.movimientos || []).forEach(m => {
+      if (m && m.fecha && m.fecha.length >= 7) {
+        if (selectedYear === 'todos' || m.fecha.startsWith(selectedYear)) {
+          months.add(m.fecha.substring(0, 7));
+        }
+      }
+    });
+    return Array.from(months).sort().reverse();
+  }, [data.movimientos, selectedYear]);
 
   // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
   const monthlyVarianceHistory = useMemo(() => {
@@ -2916,14 +2928,28 @@ const AnaliticaView = () => {
   }, [selectedAccountScope, data.cuentas]);
   const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
 
-  // Función de Exportación a Excel (.xls) completo con tablas formateadas
+  // Filas a mostrar en la tabla según el filtro de mes
+  const displayedVarianceRows = useMemo(() => {
+    if (selectedMonth !== 'todos') {
+      return monthlyVarianceHistory.filter(row => row.mes === selectedMonth);
+    }
+    return monthlyVarianceHistory;
+  }, [monthlyVarianceHistory, selectedMonth]);
+
+  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses o anual
   const handleExportExcel = () => {
     const scopeName = scopeLabel.toUpperCase();
+    const isSingleMonth = selectedMonth !== 'todos';
+    const periodTitle = isSingleMonth ? formatMonthName(selectedMonth).toUpperCase() : `AÑO ${selectedYear.toUpperCase()}`;
     const movsList = (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
+      if (isSingleMonth) {
+        return m.fecha.startsWith(selectedMonth);
+      }
       if (selectedYear !== 'todos' && !m.fecha.startsWith(selectedYear)) return false;
       return true;
     });
+    const varianceList = isSingleMonth ? monthlyVarianceHistory.filter(h => h.mes === selectedMonth) : monthlyVarianceHistory;
     let excelHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -2941,7 +2967,7 @@ const AnaliticaView = () => {
       </head>
       <body>
         <table border="1">
-          <tr><td colspan="7" class="header-main">FINANZAS 2026 - INFORME Y VARIANZA: ${scopeName} (${selectedYear})</td></tr>
+          <tr><td colspan="7" class="header-main">FINANZAS 2026 - INFORME Y VARIANZA: ${scopeName} (${periodTitle})</td></tr>
           <tr><td colspan="7"></td></tr>
           <tr><td colspan="7" class="section-title">1. RESUMEN DE SALDOS POR CUENTA</td></tr>
           <tr>
@@ -2970,7 +2996,7 @@ const AnaliticaView = () => {
     });
     excelHtml += `
           <tr><td colspan="7"></td></tr>
-          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA MES A MES (${scopeName})</td></tr>
+          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle})</td></tr>
           <tr>
             <th>Mes</th>
             <th>Saldo al Cierre</th>
@@ -2981,7 +3007,7 @@ const AnaliticaView = () => {
             <th>Ahorro / Flujo Neto</th>
           </tr>
     `;
-    monthlyVarianceHistory.forEach(row => {
+    varianceList.forEach(row => {
       const isPos = row.diff >= 0;
       excelHtml += `
         <tr>
@@ -3034,13 +3060,14 @@ const AnaliticaView = () => {
       </body>
       </html>
     `;
+    const filePeriod = isSingleMonth ? selectedMonth : selectedYear;
     const blob = new Blob([excelHtml], {
       type: 'application/vnd.ms-excel;charset=utf-8'
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Finanzas_2026_${selectedYear}_${selectedAccountScope}.xls`;
+    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -3062,11 +3089,11 @@ const AnaliticaView = () => {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: handleExportExcel,
     className: "flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all",
-    title: "Descargar hoja de cálculo Excel completa con históricos y movimientos"
+    title: `Descargar hoja de cálculo Excel de ${selectedMonth !== 'todos' ? formatMonthName(selectedMonth) : selectedYear}`
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "table",
     className: "w-4 h-4"
-  }), "Exportar Excel (.xls)"), /*#__PURE__*/React.createElement("button", {
+  }), "Exportar Excel ", selectedMonth !== 'todos' ? `(${formatMonthName(selectedMonth)})` : '(.xls)'), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsReportModalOpen(true),
     className: "flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-all"
   }, /*#__PURE__*/React.createElement(Icon, {
@@ -3099,14 +3126,28 @@ const AnaliticaView = () => {
     className: "text-[11px] font-bold text-slate-500 block mb-1"
   }, "Año:"), /*#__PURE__*/React.createElement("select", {
     value: selectedYear,
-    onChange: e => setSelectedYear(e.target.value),
+    onChange: e => {
+      setSelectedYear(e.target.value);
+      setSelectedMonth('todos');
+    },
     className: "text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
   }, availableYears.map(y => /*#__PURE__*/React.createElement("option", {
     key: y,
     value: y
   }, "Año ", y)), /*#__PURE__*/React.createElement("option", {
     value: "todos"
-  }, "Todo el Histórico")))), activePoint && /*#__PURE__*/React.createElement("div", {
+  }, "Todo el Histórico"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-bold text-slate-500 block mb-1"
+  }, "Mes:"), /*#__PURE__*/React.createElement("select", {
+    value: selectedMonth,
+    onChange: e => setSelectedMonth(e.target.value),
+    className: "text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todos"
+  }, "📅 Todos los meses ", selectedYear !== 'todos' ? `(${selectedYear})` : ''), availableMonths.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m,
+    value: m
+  }, formatMonthName(m)))))), activePoint && /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center gap-4 text-xs"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-400 block font-semibold uppercase"
@@ -3285,10 +3326,10 @@ const AnaliticaView = () => {
     className: "p-3.5 text-right pr-5"
   }, "Ahorro / Flujo"))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 font-medium text-slate-700"
-  }, monthlyVarianceHistory.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+  }, displayedVarianceRows.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: "7",
     className: "p-8 text-center text-slate-400"
-  }, "No hay registros en este período para la cuenta seleccionada.")) : monthlyVarianceHistory.map(row => {
+  }, "No hay registros en este período para la cuenta seleccionada.")) : displayedVarianceRows.map(row => {
     const isPositiveDiff = row.diff > 0;
     const isNegativeDiff = row.diff < 0;
     return /*#__PURE__*/React.createElement("tr", {

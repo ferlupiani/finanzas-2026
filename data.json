@@ -138,32 +138,32 @@
     "gastosFijosDefecto": [
       {
         "categoria": "Alquiler",
-        "cuenta": "acc-santander",
+        "cuenta": "acc-bbva",
         "importe": 325,
         "nombre": "Alquiler + Gastos Casa"
       },
       {
         "categoria": "Suscripciones",
-        "cuenta": "acc-santander",
+        "cuenta": "acc-bbva",
         "importe": 6.49,
         "nombre": "Spotify"
       },
       {
         "categoria": "Suscripciones",
-        "cuenta": "acc-santander",
+        "cuenta": "acc-bbva",
         "importe": 24.99,
         "nombre": "Basic Fit"
       },
       {
         "categoria": "Alquiler",
-        "cuenta": "acc-santander",
+        "cuenta": "acc-bbva",
         "id": "gf-1787748810418",
         "importe": 20,
         "nombre": "Limpieza Casa"
       },
       {
         "categoria": "Cuenta compartida",
-        "cuenta": "acc-santander",
+        "cuenta": "acc-bbva",
         "id": "gf-1787754116564",
         "importe": 50,
         "nombre": "Cuenta Revolut con Carmen"
