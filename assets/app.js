@@ -2769,6 +2769,7 @@ const AnaliticaView = () => {
   const [selectedAccountScope, setSelectedAccountScope] = useState('total-liquido');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('todas');
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [hoveredCategorySlice, setHoveredCategorySlice] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const sortedCuentas = useMemo(() => sortCuentas(data.cuentas || []), [data.cuentas]);
   const availableYears = useMemo(() => {
@@ -2792,6 +2793,126 @@ const AnaliticaView = () => {
     });
     return Array.from(months).sort().reverse();
   }, [data.movimientos, selectedYear]);
+
+  // 1. Filtrar movimientos de gasto para el análisis por categoría
+  const filteredCategoryMovements = useMemo(() => {
+    return (data.movimientos || []).filter(m => {
+      if (!m || !m.fecha || m.tipo !== 'gasto') return false;
+      if (selectedYear !== 'todos' && !m.fecha.startsWith(selectedYear)) return false;
+      if (selectedMonth !== 'todos' && !m.fecha.startsWith(selectedMonth)) return false;
+      if (selectedAccountScope === 'total-liquido') {
+        const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+        if (origAcc?.incluirEnTotal === false) return false;
+      } else if (selectedAccountScope === 'inversiones-total') {
+        if (!['acc-myinvestor', 'acc-trade'].includes(m.cuentaOrigen)) return false;
+      } else if (selectedAccountScope !== 'total-consolidado') {
+        if (m.cuentaOrigen !== selectedAccountScope) return false;
+      }
+      return true;
+    });
+  }, [data.movimientos, data.cuentas, selectedYear, selectedMonth, selectedAccountScope]);
+
+  // 2. Agrupar gastos por categoría y calcular porcentajes
+  const categoryDistribution = useMemo(() => {
+    const map = {};
+    let totalGasto = 0;
+    const catColorMap = {
+      'Alquiler': '#ef4444',
+      'Comida': '#f97316',
+      'Comer Fuera': '#eab308',
+      'Cervezas': '#84cc16',
+      'Carnet de Conducir': '#06b6d4',
+      'Suscripciones': '#6366f1',
+      'Planes': '#a855f7',
+      'Regalos': '#ec4899',
+      'Ropa': '#f43f5e',
+      'Inversiones': '#10b981',
+      'Universidad': '#3b82f6',
+      'Utilidad': '#64748b',
+      'Viajes': '#14b8a6',
+      'Fisio': '#d946ef',
+      'Caprichos': '#f59e0b',
+      'Cuenta compartida': '#8b5cf6',
+      'Otros Gastos': '#94a3b8'
+    };
+    (data.categorias || []).forEach(c => {
+      if (c && c.nombre) catColorMap[c.nombre] = c.color || catColorMap[c.nombre] || '#64748b';
+    });
+    const fallbackPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f97316', '#84cc16', '#6366f1'];
+    filteredCategoryMovements.forEach(m => {
+      const cat = m.categoria || 'Otros Gastos';
+      const imp = parseFloat(m.importe) || 0;
+      if (!map[cat]) {
+        map[cat] = {
+          categoria: cat,
+          importe: 0,
+          count: 0,
+          color: catColorMap[cat] || fallbackPalette[Object.keys(map).length % fallbackPalette.length]
+        };
+      }
+      map[cat].importe += imp;
+      map[cat].count += 1;
+      totalGasto += imp;
+    });
+    const list = Object.values(map).map(item => ({
+      ...item,
+      porcentaje: totalGasto > 0 ? item.importe / totalGasto * 100 : 0
+    })).sort((a, b) => b.importe - a.importe);
+    return {
+      list,
+      totalGasto
+    };
+  }, [filteredCategoryMovements, data.categorias]);
+
+  // 3. Generar arcos SVG para el gráfico Donut
+  const donutSlices = useMemo(() => {
+    const {
+      list,
+      totalGasto
+    } = categoryDistribution;
+    if (totalGasto <= 0 || list.length === 0) return [];
+    if (list.length === 1) {
+      const item = list[0];
+      return [{
+        ...item,
+        pathData: 'M 150 25 A 125 125 0 1 1 149.99 25 L 149.99 75 A 75 75 0 1 0 150 75 Z',
+        midX: 150,
+        midY: 50,
+        idx: 0
+      }];
+    }
+    let accumulatedAngle = -Math.PI / 2;
+    const cx = 150;
+    const cy = 150;
+    const outerR = 125;
+    const innerR = 75;
+    return list.map((item, idx) => {
+      const sliceAngle = item.importe / totalGasto * 2 * Math.PI;
+      const startAngle = accumulatedAngle;
+      const endAngle = accumulatedAngle + sliceAngle;
+      accumulatedAngle = endAngle;
+      const x1 = cx + outerR * Math.cos(startAngle);
+      const y1 = cy + outerR * Math.sin(startAngle);
+      const x2 = cx + outerR * Math.cos(endAngle);
+      const y2 = cy + outerR * Math.sin(endAngle);
+      const x3 = cx + innerR * Math.cos(endAngle);
+      const y3 = cy + innerR * Math.sin(endAngle);
+      const x4 = cx + innerR * Math.cos(startAngle);
+      const y4 = cy + innerR * Math.sin(startAngle);
+      const largeArc = sliceAngle > Math.PI ? 1 : 0;
+      const pathData = `M ${x1} ${y1} A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+      const midAngle = startAngle + sliceAngle / 2;
+      const midX = cx + (outerR + innerR) / 2 * Math.cos(midAngle);
+      const midY = cy + (outerR + innerR) / 2 * Math.sin(midAngle);
+      return {
+        ...item,
+        pathData,
+        midX,
+        midY,
+        idx
+      };
+    });
+  }, [categoryDistribution]);
 
   // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
   const monthlyVarianceHistory = useMemo(() => {
@@ -3292,6 +3413,139 @@ const AnaliticaView = () => {
   }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] ml-1"
   }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)")))))), /*#__PURE__*/React.createElement("div", {
+    onMouseLeave: () => setHoveredCategorySlice(null),
+    className: "bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-bold text-slate-900 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "pieChart",
+    className: "w-4 h-4 text-purple-600"
+  }), "Distribución de Gastos por Categoría"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Porciones de gasto según el período seleccionado (", selectedMonth !== 'todos' ? formatMonthName(selectedMonth) : selectedYear !== 'todos' ? `Año ${selectedYear}` : 'Histórico Total', ")")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200"
+  }, "Total Gastos: ", formatCurrency(categoryDistribution.totalGasto)))), categoryDistribution.totalGasto <= 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "p-10 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs"
+  }, "No hay registros de gastos en este período para la cuenta seleccionada.") : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    onMouseLeave: () => setHoveredCategorySlice(null),
+    className: "relative lg:col-span-5 flex flex-col items-center justify-center select-none"
+  }, /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 300 300",
+    className: "w-64 h-64 sm:w-72 sm:h-72 overflow-visible",
+    onMouseLeave: () => setHoveredCategorySlice(null)
+  }, donutSlices.map((slice, i) => {
+    const isHovered = hoveredCategorySlice && hoveredCategorySlice.categoria === slice.categoria;
+    const isAnyHovered = !!hoveredCategorySlice;
+    return /*#__PURE__*/React.createElement("path", {
+      key: i,
+      d: slice.pathData,
+      fill: slice.color,
+      stroke: "#ffffff",
+      strokeWidth: isHovered ? "3.5" : "2",
+      opacity: isHovered ? 1 : isAnyHovered ? 0.45 : 0.95,
+      className: "cursor-pointer transition-all duration-200",
+      style: {
+        transformOrigin: '150px 150px',
+        transform: isHovered ? 'scale(1.04)' : 'scale(1)'
+      },
+      onMouseEnter: () => setHoveredCategorySlice(slice),
+      onClick: () => setHoveredCategorySlice(slice)
+    });
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "150",
+    cy: "150",
+    r: "70",
+    fill: "#ffffff"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: "150",
+    y: "142",
+    textAnchor: "middle",
+    fontSize: "11",
+    fill: "#64748b",
+    fontWeight: "600"
+  }, "Total Gastos"), /*#__PURE__*/React.createElement("text", {
+    x: "150",
+    y: "164",
+    textAnchor: "middle",
+    fontSize: "16",
+    fill: "#0f172a",
+    fontWeight: "800",
+    fontFamily: "Inter, system-ui, sans-serif"
+  }, formatCurrency(categoryDistribution.totalGasto)), /*#__PURE__*/React.createElement("text", {
+    x: "150",
+    y: "180",
+    textAnchor: "middle",
+    fontSize: "10",
+    fill: "#94a3b8",
+    fontWeight: "600"
+  }, categoryDistribution.list.length, " categorías")), hoveredCategorySlice && /*#__PURE__*/React.createElement("div", {
+    className: "absolute pointer-events-none bg-slate-900 text-white p-3 rounded-2xl shadow-2xl text-xs z-30 border border-slate-700 animate-fadeIn w-auto max-w-[90%] sm:max-w-xs left-1/2 -translate-x-1/2 top-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full",
+    style: {
+      backgroundColor: hoveredCategorySlice.color
+    }
+  }), hoveredCategorySlice.categoria), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono font-bold"
+  }, hoveredCategorySlice.porcentaje.toFixed(1), "%")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "Importe gastado:"), /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-white font-sans text-sm"
+  }, formatCurrency(hoveredCategorySlice.importe))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-4 mt-1 text-[11px] text-slate-400"
+  }, /*#__PURE__*/React.createElement("span", null, "Frecuencia:"), /*#__PURE__*/React.createElement("span", null, hoveredCategorySlice.count, " compras / recibos")))), /*#__PURE__*/React.createElement("div", {
+    className: "lg:col-span-7 space-y-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "Desglose por Categoría"), /*#__PURE__*/React.createElement("span", null, "% del Total")), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 max-h-72 overflow-y-auto pr-1"
+  }, categoryDistribution.list.map((item, idx) => {
+    const isHovered = hoveredCategorySlice && hoveredCategorySlice.categoria === item.categoria;
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      onMouseEnter: () => setHoveredCategorySlice(item),
+      onMouseLeave: () => setHoveredCategorySlice(null),
+      onClick: () => setHoveredCategorySlice(item),
+      className: `p-2.5 rounded-xl border transition-all cursor-pointer ${isHovered ? 'bg-blue-50/70 border-blue-300 shadow-sm' : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200/80'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between text-xs mb-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 font-bold text-slate-900"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-3 h-3 rounded-full flex-shrink-0",
+      style: {
+        backgroundColor: item.color
+      }
+    }), /*#__PURE__*/React.createElement("span", null, item.categoria), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-slate-400 font-normal"
+    }, "(", item.count, " movs)")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-extrabold text-slate-900 font-sans"
+    }, formatCurrency(item.importe)), /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-slate-600 font-sans text-[11px] w-12 text-right"
+    }, item.porcentaje.toFixed(1), "%"))), /*#__PURE__*/React.createElement("div", {
+      className: "w-full bg-slate-200/70 rounded-full h-2 overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full rounded-full transition-all duration-300",
+      style: {
+        width: `${Math.min(100, Math.max(2, item.porcentaje))}%`,
+        backgroundColor: item.color
+      }
+    })));
+  }))))), /*#__PURE__*/React.createElement("div", {
     onMouseLeave: () => setHoveredPoint(null),
     className: "bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
