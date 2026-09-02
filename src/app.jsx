@@ -2963,14 +2963,8 @@ const AnaliticaView = () => {
     });
   }, [categoryDistribution]);
 
-  // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
+  // Cálculo de la evolución mes a mes (de saldos por cuenta o de gasto por categoría específica)
   const monthlyVarianceHistory = useMemo(() => {
-    // 1. Mapa de saldos iniciales
-    const runningBal = {};
-    (data.cuentas || []).forEach(c => {
-      if (c && c.id) runningBal[c.id] = c.saldoInicial || 0.0;
-    });
-
     const movsSorted = [...(data.movimientos || [])].sort((a, b) => {
       const dComp = (a.fecha || '').localeCompare(b.fecha || '');
       if (dComp !== 0) return dComp;
@@ -2980,6 +2974,75 @@ const AnaliticaView = () => {
     const allMonths = Array.from(
       new Set(movsSorted.map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))
     ).filter(Boolean).sort();
+
+    // CASO A: Filtrado por Categoría Específica
+    if (selectedCategoryFilter !== 'todas') {
+      const fullHistory = [];
+      let prevGastoNeto = null;
+
+      allMonths.forEach(mKey => {
+        const monthMovs = movsSorted.filter(m => {
+          if (!m || !m.fecha || !m.fecha.startsWith(mKey)) return false;
+          if (m.categoria !== selectedCategoryFilter) return false;
+
+          if (selectedAccountScope === 'total-liquido') {
+            const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+            const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+            if (m.tipo === 'gasto' && origAcc?.incluirEnTotal === false) return false;
+            if (m.tipo === 'ingreso' && destAcc?.incluirEnTotal === false) return false;
+          } else if (selectedAccountScope === 'inversiones-total') {
+            if (m.tipo === 'gasto' && !['acc-myinvestor', 'acc-trade'].includes(m.cuentaOrigen)) return false;
+            if (m.tipo === 'ingreso' && !['acc-myinvestor', 'acc-trade'].includes(m.cuentaDestino)) return false;
+          } else if (selectedAccountScope !== 'total-consolidado') {
+            if (m.tipo === 'gasto' && m.cuentaOrigen !== selectedAccountScope) return false;
+            if (m.tipo === 'ingreso' && m.cuentaDestino !== selectedAccountScope) return false;
+          }
+
+          return true;
+        });
+
+        let mesGastos = 0;
+        let mesIngresos = 0;
+
+        monthMovs.forEach(m => {
+          const imp = parseFloat(m.importe) || 0;
+          if (m.tipo === 'gasto') mesGastos += imp;
+          else if (m.tipo === 'ingreso') mesIngresos += imp;
+        });
+
+        const gastoNeto = Math.max(0, mesGastos - mesIngresos);
+        const diff = prevGastoNeto !== null ? (gastoNeto - prevGastoNeto) : 0;
+        const diffPct = (prevGastoNeto !== null && prevGastoNeto > 0) ? (diff / prevGastoNeto) * 100 : 0;
+
+        fullHistory.push({
+          mes: mKey,
+          saldo: gastoNeto,
+          gastoNeto,
+          gastoBruto: mesGastos,
+          reembolsos: mesIngresos,
+          prevSaldo: prevGastoNeto,
+          diff,
+          diffPct,
+          ingresos: mesIngresos,
+          gastos: mesGastos,
+          balance: -gastoNeto,
+          movCount: monthMovs.length
+        });
+
+        prevGastoNeto = gastoNeto;
+      });
+
+      if (selectedYear !== 'todos') {
+        return fullHistory.filter(h => h.mes.startsWith(selectedYear));
+      }
+      return fullHistory;
+    }
+
+    // CASO B: Análisis de Cuentas / Saldos (Todas las categorías)
+    const runningBal = {};
+    (data.cuentas || []).forEach(c => {
+      if (c && c.id) runningBal[c.id] = c.saldoInicial || 0.0;
+    });
 
     const fullHistory = [];
     let prevScopeSaldo = null;
@@ -3058,7 +3121,7 @@ const AnaliticaView = () => {
       return fullHistory.filter(h => h.mes.startsWith(selectedYear));
     }
     return fullHistory;
-  }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear]);
+  }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear, selectedCategoryFilter]);
 
   // Puntos del gráfico SVG con holgura superior e inferior para evitar cortes
   const chartGraphData = useMemo(() => {
@@ -3093,12 +3156,20 @@ const AnaliticaView = () => {
   }, [monthlyVarianceHistory]);
 
   const scopeLabel = useMemo(() => {
-    if (selectedAccountScope === 'total-liquido') return 'Patrimonio Líquido Disponible';
-    if (selectedAccountScope === 'total-consolidado') return 'Patrimonio Total Consolidado';
-    if (selectedAccountScope === 'inversiones-total') return 'Cartera de Inversiones (MyInvestor + Trade)';
-    const found = (data.cuentas || []).find(c => c.id === selectedAccountScope);
-    return found ? `Cuenta: ${found.nombre}` : 'Cuenta';
-  }, [selectedAccountScope, data.cuentas]);
+    let accText = '';
+    if (selectedAccountScope === 'total-liquido') accText = 'Patrimonio Líquido';
+    else if (selectedAccountScope === 'total-consolidado') accText = 'Total Consolidado';
+    else if (selectedAccountScope === 'inversiones-total') return 'Cartera de Inversión (MyInvestor + Trade)';
+    else {
+      const found = (data.cuentas || []).find(c => c.id === selectedAccountScope);
+      accText = found ? found.nombre : 'Cuenta';
+    }
+
+    if (selectedCategoryFilter !== 'todas') {
+      return `${accText} • Categoría: ${selectedCategoryFilter}`;
+    }
+    return accText;
+  }, [selectedAccountScope, selectedCategoryFilter, data.cuentas]);
 
   const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
 
@@ -3110,14 +3181,16 @@ const AnaliticaView = () => {
     return monthlyVarianceHistory;
   }, [monthlyVarianceHistory, selectedMonth]);
 
-  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses o anual
+  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses, anual y por categoría
   const handleExportExcel = () => {
     const scopeName = scopeLabel.toUpperCase();
     const isSingleMonth = selectedMonth !== 'todos';
+    const isCatFiltered = selectedCategoryFilter !== 'todas';
     const periodTitle = isSingleMonth ? formatMonthName(selectedMonth).toUpperCase() : `AÑO ${selectedYear.toUpperCase()}`;
 
     const movsList = (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
+      if (isCatFiltered && m.categoria !== selectedCategoryFilter) return false;
       if (isSingleMonth) {
         return m.fecha.startsWith(selectedMonth);
       }
@@ -3177,15 +3250,15 @@ const AnaliticaView = () => {
 
     excelHtml += `
           <tr><td colspan="7"></td></tr>
-          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle})</td></tr>
+          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle}${isCatFiltered ? ` - ${selectedCategoryFilter}` : ''})</td></tr>
           <tr>
             <th>Mes</th>
-            <th>Saldo al Cierre</th>
-            <th>Varianza Neta (€)</th>
+            <th>${isCatFiltered ? `Gasto Neto (${selectedCategoryFilter})` : 'Saldo al Cierre'}</th>
+            <th>${isCatFiltered ? 'Variación Gasto (€)' : 'Varianza Neta (€)'}</th>
             <th>Varianza (%)</th>
-            <th>Ingresos Mes</th>
-            <th>Gastos Mes</th>
-            <th>Ahorro / Flujo Neto</th>
+            <th>${isCatFiltered ? 'Devoluciones / Bizums' : 'Ingresos Mes'}</th>
+            <th>${isCatFiltered ? 'Gasto Bruto' : 'Gastos Mes'}</th>
+            <th>${isCatFiltered ? 'Nº Movimientos' : 'Ahorro / Flujo'}</th>
           </tr>
     `;
 
@@ -3201,9 +3274,9 @@ const AnaliticaView = () => {
           <td class="num ${row.prevSaldo === null ? '' : isPos ? 'pos' : 'neg'}">
             ${row.prevSaldo === null ? '-' : (isPos ? '+' : '') + row.diffPct.toFixed(1) + '%'}
           </td>
-          <td class="num pos">+${row.ingresos.toFixed(2)} €</td>
-          <td class="num neg">-${row.gastos.toFixed(2)} €</td>
-          <td class="num bold ${row.balance >= 0 ? 'pos' : 'neg'}">${row.balance >= 0 ? '+' : ''}${row.balance.toFixed(2)} €</td>
+          <td class="num pos">+${(isCatFiltered ? (row.reembolsos || 0) : row.ingresos).toFixed(2)} €</td>
+          <td class="num neg">-${(isCatFiltered ? (row.gastoBruto || 0) : row.gastos).toFixed(2)} €</td>
+          <td class="num bold ${row.balance >= 0 ? 'pos' : 'neg'}">${isCatFiltered ? `${row.movCount} movs` : `${row.balance >= 0 ? '+' : ''}${row.balance.toFixed(2)} €`}</td>
         </tr>
       `;
     });
@@ -3248,11 +3321,12 @@ const AnaliticaView = () => {
     `;
 
     const filePeriod = isSingleMonth ? selectedMonth : selectedYear;
+    const fileCat = isCatFiltered ? `_${selectedCategoryFilter.replace(/\s+/g, '_')}` : '';
     const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}.xls`;
+    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}${fileCat}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -3348,13 +3422,31 @@ const AnaliticaView = () => {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">Categoría:</label>
+            <select
+              value={selectedCategoryFilter}
+              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
+            >
+              <option value="todas">🏷️ Todas las categorías</option>
+              {(data.categorias || []).map(cat => (
+                <option key={cat.id} value={cat.nombre}>
+                  {cat.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Resumen del punto activo / hover */}
         {activePoint && (
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center gap-4 text-xs">
             <div>
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase">{formatMonthName(activePoint.mes)}</span>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase">
+                {selectedCategoryFilter !== 'todas' ? `${selectedCategoryFilter} (${formatMonthName(activePoint.mes)})` : formatMonthName(activePoint.mes)}
+              </span>
               <span className="text-base font-extrabold text-slate-900 font-sans">
                 {formatCurrency(activePoint.saldo)}
               </span>
@@ -3364,8 +3456,9 @@ const AnaliticaView = () => {
               <div className="border-l border-slate-200 pl-3">
                 <span className="text-[10px] text-slate-400 block font-semibold">Varianza vs mes ant.</span>
                 <span className={`font-bold font-sans flex items-center gap-1 ${
-                  activePoint.diff > 0 ? 'text-emerald-600' :
-                  activePoint.diff < 0 ? 'text-rose-600' : 'text-slate-500'
+                  selectedCategoryFilter !== 'todas'
+                    ? (activePoint.diff > 0 ? 'text-rose-600' : activePoint.diff < 0 ? 'text-emerald-600' : 'text-slate-500')
+                    : (activePoint.diff > 0 ? 'text-emerald-600' : activePoint.diff < 0 ? 'text-rose-600' : 'text-slate-500')
                 }`}>
                   {activePoint.diff > 0 ? `+${formatCurrency(activePoint.diff)}` : formatCurrency(activePoint.diff)}
                   <span className="text-[10px]">({activePoint.diff > 0 ? '+' : ''}{activePoint.diffPct.toFixed(1)}%)</span>
@@ -3385,10 +3478,14 @@ const AnaliticaView = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Icon name="trendingUp" className="w-4 h-4 text-blue-600" />
-              Recorrido de {scopeLabel}
+              {selectedCategoryFilter !== 'todas'
+                ? `Evolución Mensual en: ${selectedCategoryFilter}`
+                : `Recorrido de ${scopeLabel}`}
             </h3>
             <p className="text-xs text-slate-500">
-              Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.
+              {selectedCategoryFilter !== 'todas'
+                ? `Evolución del gasto neto mensual en la categoría "${selectedCategoryFilter}" y variación mes a mes.`
+                : 'Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.'}
             </p>
           </div>
 
@@ -3491,18 +3588,34 @@ const AnaliticaView = () => {
               </div>
 
               <div className="flex items-baseline justify-between gap-4">
-                <span className="text-slate-400">Saldo final:</span>
+                <span className="text-slate-400">
+                  {selectedCategoryFilter !== 'todas' ? `Gasto en ${selectedCategoryFilter}:` : 'Saldo final:'}
+                </span>
                 <span className="font-extrabold text-white font-sans text-sm">
                   {formatCurrency(hoveredPoint.saldo)}
                 </span>
               </div>
 
+              {selectedCategoryFilter !== 'todas' && hoveredPoint.reembolsos > 0 && (
+                <div className="mt-1 pt-1 border-t border-slate-800 space-y-0.5 text-[11px]">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Gasto bruto:</span>
+                    <span>{formatCurrency(hoveredPoint.gastoBruto)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-emerald-400 font-medium">
+                    <span>Devuelto / Bizums:</span>
+                    <span>-{formatCurrency(hoveredPoint.reembolsos)}</span>
+                  </div>
+                </div>
+              )}
+
               {hoveredPoint.prevSaldo !== null && (
-                <div className="flex items-baseline justify-between gap-4 mt-1">
-                  <span className="text-slate-400">Varianza:</span>
+                <div className="flex items-baseline justify-between gap-4 mt-1 border-t border-slate-800/80 pt-1">
+                  <span className="text-slate-400">Variación vs mes ant:</span>
                   <span className={`font-bold font-sans ${
-                    hoveredPoint.diff > 0 ? 'text-emerald-400' :
-                    hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'
+                    selectedCategoryFilter !== 'todas'
+                      ? (hoveredPoint.diff > 0 ? 'text-rose-400' : hoveredPoint.diff < 0 ? 'text-emerald-400' : 'text-slate-300')
+                      : (hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300')
                   }`}>
                     {hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff)}
                     <span className="text-[10px] ml-1">({hoveredPoint.diff > 0 ? '+' : ''}{hoveredPoint.diffPct.toFixed(1)}%)</span>
@@ -3710,9 +3823,15 @@ const AnaliticaView = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Icon name="table" className="w-4 h-4 text-slate-700" />
-              Tabla de Cierres & Varianza Mensual ({scopeLabel})
+              {selectedCategoryFilter !== 'todas'
+                ? `Tabla de Gasto Mensual en ${selectedCategoryFilter}`
+                : `Tabla de Cierres & Varianza Mensual (${scopeLabel})`}
             </h3>
-            <p className="text-xs text-slate-500">Histórico numérico mes a mes con balances de entrada, salida y cambio neto</p>
+            <p className="text-xs text-slate-500">
+              {selectedCategoryFilter !== 'todas'
+                ? 'Histórico mes a mes con gasto neto, gasto bruto, devoluciones y variación de consumo'
+                : 'Histórico numérico mes a mes con balances de entrada, salida y cambio neto'}
+            </p>
           </div>
         </div>
 
@@ -3724,19 +3843,29 @@ const AnaliticaView = () => {
             <thead>
               <tr className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/80">
                 <th className="p-3.5 pl-5">Mes</th>
-                <th className="p-3.5 text-right">Saldo al Cierre</th>
-                <th className="p-3.5 text-right">Varianza Neta (€)</th>
+                <th className="p-3.5 text-right">
+                  {selectedCategoryFilter !== 'todas' ? `Gasto Neto (${selectedCategoryFilter})` : 'Saldo al Cierre'}
+                </th>
+                <th className="p-3.5 text-right">
+                  {selectedCategoryFilter !== 'todas' ? 'Variación Gasto (€)' : 'Varianza Neta (€)'}
+                </th>
                 <th className="p-3.5 text-right">Varianza (%)</th>
-                <th className="p-3.5 text-right">Ingresos Mes</th>
-                <th className="p-3.5 text-right">Gastos Mes</th>
-                <th className="p-3.5 text-right pr-5">Ahorro / Flujo</th>
+                <th className="p-3.5 text-right">
+                  {selectedCategoryFilter !== 'todas' ? 'Devoluciones / Bizums' : 'Ingresos Mes'}
+                </th>
+                <th className="p-3.5 text-right">
+                  {selectedCategoryFilter !== 'todas' ? 'Gasto Bruto' : 'Gastos Mes'}
+                </th>
+                <th className="p-3.5 text-right pr-5">
+                  {selectedCategoryFilter !== 'todas' ? 'Nº Movimientos' : 'Ahorro / Flujo'}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {displayedVarianceRows.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-slate-400">
-                    No hay registros en este período para la cuenta seleccionada.
+                    No hay registros en este período para los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
@@ -3763,8 +3892,9 @@ const AnaliticaView = () => {
                           <span className="text-slate-400 font-normal">Inicial</span>
                         ) : (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs ${
-                            isPositiveDiff ? 'bg-emerald-50 text-emerald-700 font-bold' :
-                            isNegativeDiff ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-500'
+                            selectedCategoryFilter !== 'todas'
+                              ? (isPositiveDiff ? 'bg-rose-50 text-rose-700 font-bold' : isNegativeDiff ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-500')
+                              : (isPositiveDiff ? 'bg-emerald-50 text-emerald-700 font-bold' : isNegativeDiff ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-500')
                           }`}>
                             {isPositiveDiff ? `+${formatCurrency(row.diff)}` : formatCurrency(row.diff)}
                           </span>
@@ -3774,19 +3904,33 @@ const AnaliticaView = () => {
                         {row.prevSaldo === null ? (
                           <span className="text-slate-400">-</span>
                         ) : (
-                          <span className={isPositiveDiff ? 'text-emerald-700 font-bold' : isNegativeDiff ? 'text-rose-700 font-bold' : 'text-slate-500'}>
+                          <span className={
+                            selectedCategoryFilter !== 'todas'
+                              ? (isPositiveDiff ? 'text-rose-700 font-bold' : isNegativeDiff ? 'text-emerald-700 font-bold' : 'text-slate-500')
+                              : (isPositiveDiff ? 'text-emerald-700 font-bold' : isNegativeDiff ? 'text-rose-700 font-bold' : 'text-slate-500')
+                          }>
                             {isPositiveDiff ? '+' : ''}{row.diffPct.toFixed(1)}%
                           </span>
                         )}
                       </td>
                       <td className="p-3.5 text-right text-emerald-600 font-sans font-semibold">
-                        +{formatCurrency(row.ingresos)}
+                        {selectedCategoryFilter !== 'todas'
+                          ? (row.reembolsos > 0 ? `+${formatCurrency(row.reembolsos)}` : '0,00 €')
+                          : `+${formatCurrency(row.ingresos)}`}
                       </td>
                       <td className="p-3.5 text-right text-rose-600 font-sans font-semibold">
-                        -{formatCurrency(row.gastos)}
+                        {selectedCategoryFilter !== 'todas'
+                          ? (row.gastoBruto > 0 ? `-${formatCurrency(row.gastoBruto)}` : '0,00 €')
+                          : `-${formatCurrency(row.gastos)}`}
                       </td>
-                      <td className={`p-3.5 text-right pr-5 font-bold font-sans ${row.balance >= 0 ? 'text-blue-700' : 'text-rose-700'}`}>
-                        {row.balance > 0 ? `+${formatCurrency(row.balance)}` : formatCurrency(row.balance)}
+                      <td className={`p-3.5 text-right pr-5 font-bold font-sans ${
+                        selectedCategoryFilter !== 'todas'
+                          ? 'text-slate-800'
+                          : (row.balance >= 0 ? 'text-blue-700' : 'text-rose-700')
+                      }`}>
+                        {selectedCategoryFilter !== 'todas'
+                          ? `${row.movCount} movs`
+                          : (row.balance > 0 ? `+${formatCurrency(row.balance)}` : formatCurrency(row.balance))}
                       </td>
                     </tr>
                   );

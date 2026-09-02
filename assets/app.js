@@ -2985,19 +2985,73 @@ const AnaliticaView = () => {
     });
   }, [categoryDistribution]);
 
-  // Cálculo de la evolución mes a mes con saldos de cierre y varianza histórica
+  // Cálculo de la evolución mes a mes (de saldos por cuenta o de gasto por categoría específica)
   const monthlyVarianceHistory = useMemo(() => {
-    // 1. Mapa de saldos iniciales
-    const runningBal = {};
-    (data.cuentas || []).forEach(c => {
-      if (c && c.id) runningBal[c.id] = c.saldoInicial || 0.0;
-    });
     const movsSorted = [...(data.movimientos || [])].sort((a, b) => {
       const dComp = (a.fecha || '').localeCompare(b.fecha || '');
       if (dComp !== 0) return dComp;
       return (a.id || '').localeCompare(b.id || '');
     });
     const allMonths = Array.from(new Set(movsSorted.map(m => m && m.fecha ? m.fecha.substring(0, 7) : ''))).filter(Boolean).sort();
+
+    // CASO A: Filtrado por Categoría Específica
+    if (selectedCategoryFilter !== 'todas') {
+      const fullHistory = [];
+      let prevGastoNeto = null;
+      allMonths.forEach(mKey => {
+        const monthMovs = movsSorted.filter(m => {
+          if (!m || !m.fecha || !m.fecha.startsWith(mKey)) return false;
+          if (m.categoria !== selectedCategoryFilter) return false;
+          if (selectedAccountScope === 'total-liquido') {
+            const origAcc = (data.cuentas || []).find(c => c.id === m.cuentaOrigen);
+            const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
+            if (m.tipo === 'gasto' && origAcc?.incluirEnTotal === false) return false;
+            if (m.tipo === 'ingreso' && destAcc?.incluirEnTotal === false) return false;
+          } else if (selectedAccountScope === 'inversiones-total') {
+            if (m.tipo === 'gasto' && !['acc-myinvestor', 'acc-trade'].includes(m.cuentaOrigen)) return false;
+            if (m.tipo === 'ingreso' && !['acc-myinvestor', 'acc-trade'].includes(m.cuentaDestino)) return false;
+          } else if (selectedAccountScope !== 'total-consolidado') {
+            if (m.tipo === 'gasto' && m.cuentaOrigen !== selectedAccountScope) return false;
+            if (m.tipo === 'ingreso' && m.cuentaDestino !== selectedAccountScope) return false;
+          }
+          return true;
+        });
+        let mesGastos = 0;
+        let mesIngresos = 0;
+        monthMovs.forEach(m => {
+          const imp = parseFloat(m.importe) || 0;
+          if (m.tipo === 'gasto') mesGastos += imp;else if (m.tipo === 'ingreso') mesIngresos += imp;
+        });
+        const gastoNeto = Math.max(0, mesGastos - mesIngresos);
+        const diff = prevGastoNeto !== null ? gastoNeto - prevGastoNeto : 0;
+        const diffPct = prevGastoNeto !== null && prevGastoNeto > 0 ? diff / prevGastoNeto * 100 : 0;
+        fullHistory.push({
+          mes: mKey,
+          saldo: gastoNeto,
+          gastoNeto,
+          gastoBruto: mesGastos,
+          reembolsos: mesIngresos,
+          prevSaldo: prevGastoNeto,
+          diff,
+          diffPct,
+          ingresos: mesIngresos,
+          gastos: mesGastos,
+          balance: -gastoNeto,
+          movCount: monthMovs.length
+        });
+        prevGastoNeto = gastoNeto;
+      });
+      if (selectedYear !== 'todos') {
+        return fullHistory.filter(h => h.mes.startsWith(selectedYear));
+      }
+      return fullHistory;
+    }
+
+    // CASO B: Análisis de Cuentas / Saldos (Todas las categorías)
+    const runningBal = {};
+    (data.cuentas || []).forEach(c => {
+      if (c && c.id) runningBal[c.id] = c.saldoInicial || 0.0;
+    });
     const fullHistory = [];
     let prevScopeSaldo = null;
     allMonths.forEach(mKey => {
@@ -3065,7 +3119,7 @@ const AnaliticaView = () => {
       return fullHistory.filter(h => h.mes.startsWith(selectedYear));
     }
     return fullHistory;
-  }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear]);
+  }, [data.cuentas, data.movimientos, selectedAccountScope, selectedYear, selectedCategoryFilter]);
 
   // Puntos del gráfico SVG con holgura superior e inferior para evitar cortes
   const chartGraphData = useMemo(() => {
@@ -3112,12 +3166,16 @@ const AnaliticaView = () => {
     };
   }, [monthlyVarianceHistory]);
   const scopeLabel = useMemo(() => {
-    if (selectedAccountScope === 'total-liquido') return 'Patrimonio Líquido Disponible';
-    if (selectedAccountScope === 'total-consolidado') return 'Patrimonio Total Consolidado';
-    if (selectedAccountScope === 'inversiones-total') return 'Cartera de Inversiones (MyInvestor + Trade)';
-    const found = (data.cuentas || []).find(c => c.id === selectedAccountScope);
-    return found ? `Cuenta: ${found.nombre}` : 'Cuenta';
-  }, [selectedAccountScope, data.cuentas]);
+    let accText = '';
+    if (selectedAccountScope === 'total-liquido') accText = 'Patrimonio Líquido';else if (selectedAccountScope === 'total-consolidado') accText = 'Total Consolidado';else if (selectedAccountScope === 'inversiones-total') return 'Cartera de Inversión (MyInvestor + Trade)';else {
+      const found = (data.cuentas || []).find(c => c.id === selectedAccountScope);
+      accText = found ? found.nombre : 'Cuenta';
+    }
+    if (selectedCategoryFilter !== 'todas') {
+      return `${accText} • Categoría: ${selectedCategoryFilter}`;
+    }
+    return accText;
+  }, [selectedAccountScope, selectedCategoryFilter, data.cuentas]);
   const activePoint = hoveredPoint || (chartGraphData.points.length > 0 ? chartGraphData.points[chartGraphData.points.length - 1] : null);
 
   // Filas a mostrar en la tabla según el filtro de mes
@@ -3128,13 +3186,15 @@ const AnaliticaView = () => {
     return monthlyVarianceHistory;
   }, [monthlyVarianceHistory, selectedMonth]);
 
-  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses o anual
+  // Función de Exportación a Excel (.xls) completo con soporte de exportación por meses, anual y por categoría
   const handleExportExcel = () => {
     const scopeName = scopeLabel.toUpperCase();
     const isSingleMonth = selectedMonth !== 'todos';
+    const isCatFiltered = selectedCategoryFilter !== 'todas';
     const periodTitle = isSingleMonth ? formatMonthName(selectedMonth).toUpperCase() : `AÑO ${selectedYear.toUpperCase()}`;
     const movsList = (data.movimientos || []).filter(m => {
       if (!m || !m.fecha) return false;
+      if (isCatFiltered && m.categoria !== selectedCategoryFilter) return false;
       if (isSingleMonth) {
         return m.fecha.startsWith(selectedMonth);
       }
@@ -3188,15 +3248,15 @@ const AnaliticaView = () => {
     });
     excelHtml += `
           <tr><td colspan="7"></td></tr>
-          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle})</td></tr>
+          <tr><td colspan="7" class="section-title">2. HISTÓRICO Y VARIANZA (${periodTitle}${isCatFiltered ? ` - ${selectedCategoryFilter}` : ''})</td></tr>
           <tr>
             <th>Mes</th>
-            <th>Saldo al Cierre</th>
-            <th>Varianza Neta (€)</th>
+            <th>${isCatFiltered ? `Gasto Neto (${selectedCategoryFilter})` : 'Saldo al Cierre'}</th>
+            <th>${isCatFiltered ? 'Variación Gasto (€)' : 'Varianza Neta (€)'}</th>
             <th>Varianza (%)</th>
-            <th>Ingresos Mes</th>
-            <th>Gastos Mes</th>
-            <th>Ahorro / Flujo Neto</th>
+            <th>${isCatFiltered ? 'Devoluciones / Bizums' : 'Ingresos Mes'}</th>
+            <th>${isCatFiltered ? 'Gasto Bruto' : 'Gastos Mes'}</th>
+            <th>${isCatFiltered ? 'Nº Movimientos' : 'Ahorro / Flujo'}</th>
           </tr>
     `;
     varianceList.forEach(row => {
@@ -3211,9 +3271,9 @@ const AnaliticaView = () => {
           <td class="num ${row.prevSaldo === null ? '' : isPos ? 'pos' : 'neg'}">
             ${row.prevSaldo === null ? '-' : (isPos ? '+' : '') + row.diffPct.toFixed(1) + '%'}
           </td>
-          <td class="num pos">+${row.ingresos.toFixed(2)} €</td>
-          <td class="num neg">-${row.gastos.toFixed(2)} €</td>
-          <td class="num bold ${row.balance >= 0 ? 'pos' : 'neg'}">${row.balance >= 0 ? '+' : ''}${row.balance.toFixed(2)} €</td>
+          <td class="num pos">+${(isCatFiltered ? row.reembolsos || 0 : row.ingresos).toFixed(2)} €</td>
+          <td class="num neg">-${(isCatFiltered ? row.gastoBruto || 0 : row.gastos).toFixed(2)} €</td>
+          <td class="num bold ${row.balance >= 0 ? 'pos' : 'neg'}">${isCatFiltered ? `${row.movCount} movs` : `${row.balance >= 0 ? '+' : ''}${row.balance.toFixed(2)} €`}</td>
         </tr>
       `;
     });
@@ -3253,13 +3313,14 @@ const AnaliticaView = () => {
       </html>
     `;
     const filePeriod = isSingleMonth ? selectedMonth : selectedYear;
+    const fileCat = isCatFiltered ? `_${selectedCategoryFilter.replace(/\s+/g, '_')}` : '';
     const blob = new Blob([excelHtml], {
       type: 'application/vnd.ms-excel;charset=utf-8'
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}.xls`;
+    a.download = `Finanzas_2026_${filePeriod}_${selectedAccountScope}${fileCat}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -3339,18 +3400,29 @@ const AnaliticaView = () => {
   }, "📅 Todos los meses ", selectedYear !== 'todos' ? `(${selectedYear})` : ''), availableMonths.map(m => /*#__PURE__*/React.createElement("option", {
     key: m,
     value: m
-  }, formatMonthName(m)))))), activePoint && /*#__PURE__*/React.createElement("div", {
+  }, formatMonthName(m))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-bold text-slate-500 block mb-1"
+  }, "Categoría:"), /*#__PURE__*/React.createElement("select", {
+    value: selectedCategoryFilter,
+    onChange: e => setSelectedCategoryFilter(e.target.value),
+    className: "text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-900"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "todas"
+  }, "🏷️ Todas las categorías"), (data.categorias || []).map(cat => /*#__PURE__*/React.createElement("option", {
+    key: cat.id,
+    value: cat.nombre
+  }, cat.nombre))))), activePoint && /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center gap-4 text-xs"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-400 block font-semibold uppercase"
-  }, formatMonthName(activePoint.mes)), /*#__PURE__*/React.createElement("span", {
+  }, selectedCategoryFilter !== 'todas' ? `${selectedCategoryFilter} (${formatMonthName(activePoint.mes)})` : formatMonthName(activePoint.mes)), /*#__PURE__*/React.createElement("span", {
     className: "text-base font-extrabold text-slate-900 font-sans"
   }, formatCurrency(activePoint.saldo))), activePoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
     className: "border-l border-slate-200 pl-3"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-400 block font-semibold"
   }, "Varianza vs mes ant."), /*#__PURE__*/React.createElement("span", {
-    className: `font-bold font-sans flex items-center gap-1 ${activePoint.diff > 0 ? 'text-emerald-600' : activePoint.diff < 0 ? 'text-rose-600' : 'text-slate-500'}`
+    className: `font-bold font-sans flex items-center gap-1 ${selectedCategoryFilter !== 'todas' ? activePoint.diff > 0 ? 'text-rose-600' : activePoint.diff < 0 ? 'text-emerald-600' : 'text-slate-500' : activePoint.diff > 0 ? 'text-emerald-600' : activePoint.diff < 0 ? 'text-rose-600' : 'text-slate-500'}`
   }, activePoint.diff > 0 ? `+${formatCurrency(activePoint.diff)}` : formatCurrency(activePoint.diff), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px]"
   }, "(", activePoint.diff > 0 ? '+' : '', activePoint.diffPct.toFixed(1), "%)"))))), /*#__PURE__*/React.createElement("div", {
@@ -3363,9 +3435,9 @@ const AnaliticaView = () => {
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "trendingUp",
     className: "w-4 h-4 text-blue-600"
-  }), "Recorrido de ", scopeLabel), /*#__PURE__*/React.createElement("p", {
+  }), selectedCategoryFilter !== 'todas' ? `Evolución Mensual en: ${selectedCategoryFilter}` : `Recorrido de ${scopeLabel}`), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, "Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.")), /*#__PURE__*/React.createElement("span", {
+  }, selectedCategoryFilter !== 'todas' ? `Evolución del gasto neto mensual en la categoría "${selectedCategoryFilter}" y variación mes a mes.` : 'Pasa el ratón o pulsa sobre las bolitas para ver el saldo de cierre y la varianza de cada mes.')), /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200"
   }, monthlyVarianceHistory.length, " Meses computados")), /*#__PURE__*/React.createElement("div", {
     onMouseLeave: () => setHoveredPoint(null),
@@ -3473,14 +3545,20 @@ const AnaliticaView = () => {
     className: "flex items-baseline justify-between gap-4"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400"
-  }, "Saldo final:"), /*#__PURE__*/React.createElement("span", {
+  }, selectedCategoryFilter !== 'todas' ? `Gasto en ${selectedCategoryFilter}:` : 'Saldo final:'), /*#__PURE__*/React.createElement("span", {
     className: "font-extrabold text-white font-sans text-sm"
-  }, formatCurrency(hoveredPoint.saldo))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline justify-between gap-4 mt-1"
+  }, formatCurrency(hoveredPoint.saldo))), selectedCategoryFilter !== 'todas' && hoveredPoint.reembolsos > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 pt-1 border-t border-slate-800 space-y-0.5 text-[11px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-slate-400"
+  }, /*#__PURE__*/React.createElement("span", null, "Gasto bruto:"), /*#__PURE__*/React.createElement("span", null, formatCurrency(hoveredPoint.gastoBruto))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-emerald-400 font-medium"
+  }, /*#__PURE__*/React.createElement("span", null, "Devuelto / Bizums:"), /*#__PURE__*/React.createElement("span", null, "-", formatCurrency(hoveredPoint.reembolsos)))), hoveredPoint.prevSaldo !== null && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-4 mt-1 border-t border-slate-800/80 pt-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400"
-  }, "Varianza:"), /*#__PURE__*/React.createElement("span", {
-    className: `font-bold font-sans ${hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
+  }, "Variación vs mes ant:"), /*#__PURE__*/React.createElement("span", {
+    className: `font-bold font-sans ${selectedCategoryFilter !== 'todas' ? hoveredPoint.diff > 0 ? 'text-rose-400' : hoveredPoint.diff < 0 ? 'text-emerald-400' : 'text-slate-300' : hoveredPoint.diff > 0 ? 'text-emerald-400' : hoveredPoint.diff < 0 ? 'text-rose-400' : 'text-slate-300'}`
   }, hoveredPoint.diff > 0 ? `+${formatCurrency(hoveredPoint.diff)}` : formatCurrency(hoveredPoint.diff), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] ml-1"
   }, "(", hoveredPoint.diff > 0 ? '+' : '', hoveredPoint.diffPct.toFixed(1), "%)")))))), /*#__PURE__*/React.createElement("div", {
@@ -3636,9 +3714,9 @@ const AnaliticaView = () => {
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "table",
     className: "w-4 h-4 text-slate-700"
-  }), "Tabla de Cierres & Varianza Mensual (", scopeLabel, ")"), /*#__PURE__*/React.createElement("p", {
+  }), selectedCategoryFilter !== 'todas' ? `Tabla de Gasto Mensual en ${selectedCategoryFilter}` : `Tabla de Cierres & Varianza Mensual (${scopeLabel})`), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, "Histórico numérico mes a mes con balances de entrada, salida y cambio neto"))), /*#__PURE__*/React.createElement("div", {
+  }, selectedCategoryFilter !== 'todas' ? 'Histórico mes a mes con gasto neto, gasto bruto, devoluciones y variación de consumo' : 'Histórico numérico mes a mes con balances de entrada, salida y cambio neto'))), /*#__PURE__*/React.createElement("div", {
     className: "overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
     onMouseLeave: () => setHoveredPoint(null),
@@ -3649,22 +3727,22 @@ const AnaliticaView = () => {
     className: "p-3.5 pl-5"
   }, "Mes"), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right"
-  }, "Saldo al Cierre"), /*#__PURE__*/React.createElement("th", {
+  }, selectedCategoryFilter !== 'todas' ? `Gasto Neto (${selectedCategoryFilter})` : 'Saldo al Cierre'), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right"
-  }, "Varianza Neta (€)"), /*#__PURE__*/React.createElement("th", {
+  }, selectedCategoryFilter !== 'todas' ? 'Variación Gasto (€)' : 'Varianza Neta (€)'), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right"
   }, "Varianza (%)"), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right"
-  }, "Ingresos Mes"), /*#__PURE__*/React.createElement("th", {
+  }, selectedCategoryFilter !== 'todas' ? 'Devoluciones / Bizums' : 'Ingresos Mes'), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right"
-  }, "Gastos Mes"), /*#__PURE__*/React.createElement("th", {
+  }, selectedCategoryFilter !== 'todas' ? 'Gasto Bruto' : 'Gastos Mes'), /*#__PURE__*/React.createElement("th", {
     className: "p-3.5 text-right pr-5"
-  }, "Ahorro / Flujo"))), /*#__PURE__*/React.createElement("tbody", {
+  }, selectedCategoryFilter !== 'todas' ? 'Nº Movimientos' : 'Ahorro / Flujo'))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 font-medium text-slate-700"
   }, displayedVarianceRows.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: "7",
     className: "p-8 text-center text-slate-400"
-  }, "No hay registros en este período para la cuenta seleccionada.")) : displayedVarianceRows.map(row => {
+  }, "No hay registros en este período para los filtros seleccionados.")) : displayedVarianceRows.map(row => {
     const isPositiveDiff = row.diff > 0;
     const isNegativeDiff = row.diff < 0;
     return /*#__PURE__*/React.createElement("tr", {
@@ -3683,20 +3761,20 @@ const AnaliticaView = () => {
     }, row.prevSaldo === null ? /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 font-normal"
     }, "Inicial") : /*#__PURE__*/React.createElement("span", {
-      className: `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs ${isPositiveDiff ? 'bg-emerald-50 text-emerald-700 font-bold' : isNegativeDiff ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-500'}`
+      className: `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs ${selectedCategoryFilter !== 'todas' ? isPositiveDiff ? 'bg-rose-50 text-rose-700 font-bold' : isNegativeDiff ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-500' : isPositiveDiff ? 'bg-emerald-50 text-emerald-700 font-bold' : isNegativeDiff ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-500'}`
     }, isPositiveDiff ? `+${formatCurrency(row.diff)}` : formatCurrency(row.diff))), /*#__PURE__*/React.createElement("td", {
       className: "p-3.5 text-right font-sans"
     }, row.prevSaldo === null ? /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
     }, "-") : /*#__PURE__*/React.createElement("span", {
-      className: isPositiveDiff ? 'text-emerald-700 font-bold' : isNegativeDiff ? 'text-rose-700 font-bold' : 'text-slate-500'
+      className: selectedCategoryFilter !== 'todas' ? isPositiveDiff ? 'text-rose-700 font-bold' : isNegativeDiff ? 'text-emerald-700 font-bold' : 'text-slate-500' : isPositiveDiff ? 'text-emerald-700 font-bold' : isNegativeDiff ? 'text-rose-700 font-bold' : 'text-slate-500'
     }, isPositiveDiff ? '+' : '', row.diffPct.toFixed(1), "%")), /*#__PURE__*/React.createElement("td", {
       className: "p-3.5 text-right text-emerald-600 font-sans font-semibold"
-    }, "+", formatCurrency(row.ingresos)), /*#__PURE__*/React.createElement("td", {
+    }, selectedCategoryFilter !== 'todas' ? row.reembolsos > 0 ? `+${formatCurrency(row.reembolsos)}` : '0,00 €' : `+${formatCurrency(row.ingresos)}`), /*#__PURE__*/React.createElement("td", {
       className: "p-3.5 text-right text-rose-600 font-sans font-semibold"
-    }, "-", formatCurrency(row.gastos)), /*#__PURE__*/React.createElement("td", {
-      className: `p-3.5 text-right pr-5 font-bold font-sans ${row.balance >= 0 ? 'text-blue-700' : 'text-rose-700'}`
-    }, row.balance > 0 ? `+${formatCurrency(row.balance)}` : formatCurrency(row.balance)));
+    }, selectedCategoryFilter !== 'todas' ? row.gastoBruto > 0 ? `-${formatCurrency(row.gastoBruto)}` : '0,00 €' : `-${formatCurrency(row.gastos)}`), /*#__PURE__*/React.createElement("td", {
+      className: `p-3.5 text-right pr-5 font-bold font-sans ${selectedCategoryFilter !== 'todas' ? 'text-slate-800' : row.balance >= 0 ? 'text-blue-700' : 'text-rose-700'}`
+    }, selectedCategoryFilter !== 'todas' ? `${row.movCount} movs` : row.balance > 0 ? `+${formatCurrency(row.balance)}` : formatCurrency(row.balance)));
   }))))), isReportModalOpen && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn"
   }, /*#__PURE__*/React.createElement("div", {
