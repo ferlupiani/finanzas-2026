@@ -214,10 +214,11 @@ const defaultFallbackData = {
     inversionFija: 200.00,
     cuentaInversionDefecto: 'acc-myinvestor',
     gastosFijosDefecto: [
-      { id: 'gf-1', nombre: 'Alquiler + Gastos Casa', categoria: 'Alquiler', cuenta: 'acc-bbva', importe: 325.00 },
+      { id: 'gf-1', nombre: 'Alquiler + Gastos Casa', categoria: 'Alquiler', cuenta: 'acc-santander', importe: 325.00 },
+      { id: 'gf-5', nombre: 'Cuenta Revolut con Carmen', categoria: 'Cuenta compartida', cuenta: 'acc-santander', importe: 50.00 },
       { id: 'gf-2', nombre: 'Spotify', categoria: 'Suscripciones', cuenta: 'acc-bbva', importe: 6.49 },
       { id: 'gf-3', nombre: 'Basic Fit', categoria: 'Suscripciones', cuenta: 'acc-bbva', importe: 24.99 },
-      { id: 'gf-4', nombre: 'AppleCare+', categoria: 'Suscripciones', cuenta: 'acc-bbva', importe: 5.49 }
+      { id: 'gf-4', nombre: 'Limpieza Casa', categoria: 'Alquiler', cuenta: 'acc-bbva', importe: 20.00 }
     ],
     ingresosFijosDefecto: [
       { id: 'if-1', nombre: 'Beneficio Cuenta BBVA', categoria: 'Otros Ingresos', cuenta: 'acc-bbva', importe: 16.20, isVariable: false },
@@ -991,7 +992,7 @@ const BottomNav = ({ activeTab, setActiveTab, onOpenNewModal }) => {
 // ==========================================
 // 📊 DASHBOARD PRINCIPAL (CUENTAS EN ORDEN + DESPLEGABLE INVERSIONES)
 // ==========================================
-const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) => {
+const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter, onEditModal }) => {
   const {
     data,
     saldos,
@@ -1297,7 +1298,12 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
             const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
 
             return (
-              <div key={m.id} className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3">
+              <div
+                key={m.id}
+                onClick={() => onEditModal && onEditModal(m)}
+                className="p-3.5 sm:p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 cursor-pointer group select-none"
+                title="Haz clic para editar este movimiento"
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                     isGasto ? 'bg-rose-50 text-rose-600' :
@@ -1312,7 +1318,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
                         {m.categoria || (isTransfer ? 'Transferencia' : 'General')}
                       </span>
                       {m.comentario && (
@@ -1336,7 +1342,7 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <span className={`text-xs sm:text-sm font-bold font-sans ${
                     isGasto ? 'text-slate-900' :
                     isIngreso ? 'text-emerald-600' :
@@ -1346,6 +1352,8 @@ const DashboardView = ({ setActiveTab, onOpenNewModal, onSelectAccountFilter }) 
                      isIngreso ? `+${formatCurrency(m.importe)}` :
                      `⇄ ${formatCurrency(m.importe)}`}
                   </span>
+
+                  <Icon name="edit" className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             );
@@ -1483,8 +1491,39 @@ const SueldoEngineView = ({ setActiveTab }) => {
     }
   };
 
+  const currentMonthKey = useMemo(() => {
+    return fecha ? fecha.substring(0, 7) : new Date().toISOString().substring(0, 7);
+  }, [fecha]);
+
+  const defaultAccForGf = (gf) => {
+    if (gf.cuenta) return gf.cuenta;
+    const n = (gf.nombre || '').toLowerCase();
+    if (n.includes('alquiler') || n.includes('revolut')) return 'acc-santander';
+    return 'acc-bbva';
+  };
+
+  const isGastoFijoRegistrado = useCallback((gf) => {
+    const gfNameNorm = (gf.nombre || '').trim().toLowerCase();
+    return (data.movimientos || []).some(m => {
+      if (!m || !m.fecha || m.tipo !== 'gasto') return false;
+      if (!m.fecha.startsWith(currentMonthKey)) return false;
+      const comNorm = (m.comentario || '').trim().toLowerCase();
+      return comNorm === gfNameNorm || comNorm.includes(gfNameNorm) || (gfNameNorm.includes(comNorm) && comNorm.length >= 3);
+    });
+  }, [data.movimientos, currentMonthKey]);
+
+  const isIngresoFijoRegistrado = useCallback((inc) => {
+    const incNameNorm = (inc.nombre || '').trim().toLowerCase();
+    return (data.movimientos || []).some(m => {
+      if (!m || !m.fecha || m.tipo !== 'ingreso') return false;
+      if (!m.fecha.startsWith(currentMonthKey)) return false;
+      const comNorm = (m.comentario || '').trim().toLowerCase();
+      return comNorm === incNameNorm || comNorm.includes(incNameNorm) || (incNameNorm.includes(comNorm) && comNorm.length >= 3);
+    });
+  }, [data.movimientos, currentMonthKey]);
+
   const handleQuickRegisterFixedExpense = (gf, index) => {
-    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-bbva';
+    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || defaultAccForGf(gf);
     const rawAmt = fixedExpSelections[gf.id || index]?.importe;
     const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : gf.importe;
 
@@ -1959,15 +1998,33 @@ const SueldoEngineView = ({ setActiveTab }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {(data.config?.gastosFijosDefecto || []).map((gf, idx) => {
             const currentSelection = fixedExpSelections[gf.id || idx] || {};
-            const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-bbva';
+            const currentAcc = currentSelection.cuenta || defaultAccForGf(gf);
             const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : gf.importe;
+            const isRegistered = isGastoFijoRegistrado(gf);
 
             return (
-              <div key={gf.id || idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3">
+              <div
+                key={gf.id || idx}
+                className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all ${
+                  isRegistered
+                    ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200/60 shadow-sm'
+                    : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
                 <div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-xs font-bold text-slate-900 block truncate">{gf.nombre}</span>
-                    <span className="text-[10px] font-semibold text-slate-400">{gf.categoria}</span>
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="text-xs font-bold text-slate-900 block truncate" title={gf.nombre}>
+                      {gf.nombre}
+                    </span>
+                    {isRegistered ? (
+                      <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        ✓ Pagado
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[10px] font-semibold text-slate-400">
+                        {gf.categoria}
+                      </span>
+                    )}
                   </div>
 
                   {/* Selector de Cuenta de Cargo */}
@@ -2010,9 +2067,14 @@ const SueldoEngineView = ({ setActiveTab }) => {
 
                   <button
                     onClick={() => handleQuickRegisterFixedExpense(gf, idx)}
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                    title={isRegistered ? 'Ya registrado este mes. Haz clic si deseas registrarlo de nuevo.' : 'Registrar pago'}
+                    className={`font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap ${
+                      isRegistered
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white'
+                    }`}
                   >
-                    Pagar
+                    {isRegistered ? '✓ Pagado' : 'Pagar'}
                   </button>
                 </div>
               </div>
@@ -2124,15 +2186,31 @@ const SueldoEngineView = ({ setActiveTab }) => {
             const currentSelection = fixedIncSelections[inc.id || idx] || {};
             const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
             const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : (inc.isVariable ? '' : inc.importe);
+            const isRegistered = isIngresoFijoRegistrado(inc);
 
             return (
-              <div key={inc.id || idx} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3">
+              <div
+                key={inc.id || idx}
+                className={`p-4 rounded-2xl border flex flex-col justify-between space-y-3 transition-all ${
+                  isRegistered
+                    ? 'bg-emerald-100/70 border-emerald-400 ring-1 ring-emerald-300 shadow-sm'
+                    : 'bg-emerald-50/50 border-emerald-200/80 hover:border-emerald-300'
+                }`}
+              >
                 <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 block truncate">{inc.nombre}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      {inc.isVariable ? 'Variable' : 'Fijo'}
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-slate-900 block truncate" title={inc.nombre}>
+                      {inc.nombre}
                     </span>
+                    {isRegistered ? (
+                      <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 border border-emerald-300">
+                        ✓ Cobrado
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        {inc.isVariable ? 'Variable' : 'Fijo'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-2 flex items-center justify-between gap-1 text-[11px]">
@@ -2175,9 +2253,14 @@ const SueldoEngineView = ({ setActiveTab }) => {
 
                   <button
                     onClick={() => handleQuickRegisterFixedIncome(inc, idx)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                    title={isRegistered ? 'Ya registrado este mes. Haz clic si deseas registrarlo de nuevo.' : 'Registrar ingreso'}
+                    className={`font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap ${
+                      isRegistered
+                        ? 'bg-emerald-800 hover:bg-emerald-900 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
                   >
-                    Registrar
+                    {isRegistered ? '✓ Cobrado' : 'Registrar'}
                   </button>
                 </div>
               </div>
@@ -4311,6 +4394,7 @@ const App = () => {
                 setActiveTab={setActiveTab}
                 onOpenNewModal={handleOpenNewModal}
                 onSelectAccountFilter={handleSelectAccountFilter}
+                onEditModal={handleEditModal}
               />
             )}
 

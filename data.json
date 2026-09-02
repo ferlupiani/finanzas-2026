@@ -138,7 +138,7 @@
     "gastosFijosDefecto": [
       {
         "categoria": "Alquiler",
-        "cuenta": "acc-bbva",
+        "cuenta": "acc-santander",
         "importe": 325,
         "nombre": "Alquiler + Gastos Casa"
       },
@@ -163,7 +163,7 @@
       },
       {
         "categoria": "Cuenta compartida",
-        "cuenta": "acc-bbva",
+        "cuenta": "acc-santander",
         "id": "gf-1787754116564",
         "importe": 50,
         "nombre": "Cuenta Revolut con Carmen"

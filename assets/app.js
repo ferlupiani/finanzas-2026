@@ -413,8 +413,14 @@ const defaultFallbackData = {
       id: 'gf-1',
       nombre: 'Alquiler + Gastos Casa',
       categoria: 'Alquiler',
-      cuenta: 'acc-bbva',
+      cuenta: 'acc-santander',
       importe: 325.00
+    }, {
+      id: 'gf-5',
+      nombre: 'Cuenta Revolut con Carmen',
+      categoria: 'Cuenta compartida',
+      cuenta: 'acc-santander',
+      importe: 50.00
     }, {
       id: 'gf-2',
       nombre: 'Spotify',
@@ -429,10 +435,10 @@ const defaultFallbackData = {
       importe: 24.99
     }, {
       id: 'gf-4',
-      nombre: 'AppleCare+',
-      categoria: 'Suscripciones',
+      nombre: 'Limpieza Casa',
+      categoria: 'Alquiler',
       cuenta: 'acc-bbva',
-      importe: 5.49
+      importe: 20.00
     }],
     ingresosFijosDefecto: [{
       id: 'if-1',
@@ -1370,7 +1376,8 @@ const BottomNav = ({
 const DashboardView = ({
   setActiveTab,
   onOpenNewModal,
-  onSelectAccountFilter
+  onSelectAccountFilter,
+  onEditModal
 }) => {
   const {
     data,
@@ -1613,7 +1620,9 @@ const DashboardView = ({
     const destAcc = (data.cuentas || []).find(c => c.id === m.cuentaDestino);
     return /*#__PURE__*/React.createElement("div", {
       key: m.id,
-      className: "p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3"
+      onClick: () => onEditModal && onEditModal(m),
+      className: "p-3.5 sm:p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 cursor-pointer group select-none",
+      title: "Haz clic para editar este movimiento"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-3 min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
@@ -1626,7 +1635,7 @@ const DashboardView = ({
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-xs sm:text-sm font-bold text-slate-900 truncate"
+      className: "text-xs sm:text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors"
     }, m.categoria || (isTransfer ? 'Transferencia' : 'General')), m.comentario && /*#__PURE__*/React.createElement("span", {
       className: "text-xs text-slate-400 truncate max-w-[140px] sm:max-w-xs"
     }, "• ", m.comentario)), /*#__PURE__*/React.createElement("div", {
@@ -1634,10 +1643,13 @@ const DashboardView = ({
     }, /*#__PURE__*/React.createElement("span", {
       className: "font-semibold text-slate-600"
     }, formatDate(m.fecha)), /*#__PURE__*/React.createElement("span", null, "•"), isTransfer ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Origen', " → ", destAcc?.nombre || 'Destino') : isGasto ? /*#__PURE__*/React.createElement("span", null, origAcc?.nombre || 'Cuenta') : /*#__PURE__*/React.createElement("span", null, destAcc?.nombre || 'Cuenta')))), /*#__PURE__*/React.createElement("div", {
-      className: "text-right shrink-0"
+      className: "flex items-center gap-3 shrink-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-xs sm:text-sm font-bold font-sans ${isGasto ? 'text-slate-900' : isIngreso ? 'text-emerald-600' : 'text-sky-700'}`
-    }, isGasto ? `-${formatCurrency(m.importe)}` : isIngreso ? `+${formatCurrency(m.importe)}` : `⇄ ${formatCurrency(m.importe)}`)));
+    }, isGasto ? `-${formatCurrency(m.importe)}` : isIngreso ? `+${formatCurrency(m.importe)}` : `⇄ ${formatCurrency(m.importe)}`), /*#__PURE__*/React.createElement(Icon, {
+      name: "edit",
+      className: "w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+    })));
   }))));
 };
 
@@ -1766,8 +1778,35 @@ const SueldoEngineView = ({
       });
     }
   };
+  const currentMonthKey = useMemo(() => {
+    return fecha ? fecha.substring(0, 7) : new Date().toISOString().substring(0, 7);
+  }, [fecha]);
+  const defaultAccForGf = gf => {
+    if (gf.cuenta) return gf.cuenta;
+    const n = (gf.nombre || '').toLowerCase();
+    if (n.includes('alquiler') || n.includes('revolut')) return 'acc-santander';
+    return 'acc-bbva';
+  };
+  const isGastoFijoRegistrado = useCallback(gf => {
+    const gfNameNorm = (gf.nombre || '').trim().toLowerCase();
+    return (data.movimientos || []).some(m => {
+      if (!m || !m.fecha || m.tipo !== 'gasto') return false;
+      if (!m.fecha.startsWith(currentMonthKey)) return false;
+      const comNorm = (m.comentario || '').trim().toLowerCase();
+      return comNorm === gfNameNorm || comNorm.includes(gfNameNorm) || gfNameNorm.includes(comNorm) && comNorm.length >= 3;
+    });
+  }, [data.movimientos, currentMonthKey]);
+  const isIngresoFijoRegistrado = useCallback(inc => {
+    const incNameNorm = (inc.nombre || '').trim().toLowerCase();
+    return (data.movimientos || []).some(m => {
+      if (!m || !m.fecha || m.tipo !== 'ingreso') return false;
+      if (!m.fecha.startsWith(currentMonthKey)) return false;
+      const comNorm = (m.comentario || '').trim().toLowerCase();
+      return comNorm === incNameNorm || comNorm.includes(incNameNorm) || incNameNorm.includes(comNorm) && comNorm.length >= 3;
+    });
+  }, [data.movimientos, currentMonthKey]);
   const handleQuickRegisterFixedExpense = (gf, index) => {
-    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || gf.cuenta || 'acc-bbva';
+    const selectedAcc = fixedExpSelections[gf.id || index]?.cuenta || defaultAccForGf(gf);
     const rawAmt = fixedExpSelections[gf.id || index]?.importe;
     const finalAmt = rawAmt !== undefined && rawAmt !== '' ? parseFloat(rawAmt) : gf.importe;
     if (isNaN(finalAmt) || finalAmt <= 0) {
@@ -2165,17 +2204,21 @@ const SueldoEngineView = ({
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
   }, (data.config?.gastosFijosDefecto || []).map((gf, idx) => {
     const currentSelection = fixedExpSelections[gf.id || idx] || {};
-    const currentAcc = currentSelection.cuenta || gf.cuenta || 'acc-bbva';
+    const currentAcc = currentSelection.cuenta || defaultAccForGf(gf);
     const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : gf.importe;
+    const isRegistered = isGastoFijoRegistrado(gf);
     return /*#__PURE__*/React.createElement("div", {
       key: gf.id || idx,
-      className: "p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-3"
+      className: `p-3.5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all ${isRegistered ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200/60 shadow-sm' : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'}`
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-start justify-between"
+      className: "flex items-start justify-between gap-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-xs font-bold text-slate-900 block truncate"
-    }, gf.nombre), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-semibold text-slate-400"
+      className: "text-xs font-bold text-slate-900 block truncate",
+      title: gf.nombre
+    }, gf.nombre), isRegistered ? /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"
+    }, "✓ Pagado") : /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[10px] font-semibold text-slate-400"
     }, gf.categoria)), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex items-center justify-between gap-1 text-[11px]"
     }, /*#__PURE__*/React.createElement("span", {
@@ -2217,8 +2260,9 @@ const SueldoEngineView = ({
       className: "w-full text-xs font-black text-slate-900 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right font-sans"
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => handleQuickRegisterFixedExpense(gf, idx),
-      className: "bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
-    }, "Pagar")));
+      title: isRegistered ? 'Ya registrado este mes. Haz clic si deseas registrarlo de nuevo.' : 'Registrar pago',
+      className: `font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap ${isRegistered ? 'bg-emerald-700 hover:bg-emerald-800 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'}`
+    }, isRegistered ? '✓ Pagado' : 'Pagar')));
   }))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2304,15 +2348,19 @@ const SueldoEngineView = ({
     const currentSelection = fixedIncSelections[inc.id || idx] || {};
     const currentAcc = currentSelection.cuenta || inc.cuenta || 'acc-bbva';
     const currentAmt = currentSelection.importe !== undefined ? currentSelection.importe : inc.isVariable ? '' : inc.importe;
+    const isRegistered = isIngresoFijoRegistrado(inc);
     return /*#__PURE__*/React.createElement("div", {
       key: inc.id || idx,
-      className: "p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 flex flex-col justify-between space-y-3"
+      className: `p-4 rounded-2xl border flex flex-col justify-between space-y-3 transition-all ${isRegistered ? 'bg-emerald-100/70 border-emerald-400 ring-1 ring-emerald-300 shadow-sm' : 'bg-emerald-50/50 border-emerald-200/80 hover:border-emerald-300'}`
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between"
+      className: "flex items-center justify-between gap-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-xs font-bold text-slate-900 block truncate"
-    }, inc.nombre), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"
+      className: "text-xs font-bold text-slate-900 block truncate",
+      title: inc.nombre
+    }, inc.nombre), isRegistered ? /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 border border-emerald-300"
+    }, "✓ Cobrado") : /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"
     }, inc.isVariable ? 'Variable' : 'Fijo')), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex items-center justify-between gap-1 text-[11px]"
     }, /*#__PURE__*/React.createElement("span", {
@@ -2355,8 +2403,9 @@ const SueldoEngineView = ({
       className: "w-full text-xs font-black text-slate-900 bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-right font-sans focus:ring-2 focus:ring-emerald-500"
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => handleQuickRegisterFixedIncome(inc, idx),
-      className: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap"
-    }, "Registrar")));
+      title: isRegistered ? 'Ya registrado este mes. Haz clic si deseas registrarlo de nuevo.' : 'Registrar ingreso',
+      className: `font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all whitespace-nowrap ${isRegistered ? 'bg-emerald-800 hover:bg-emerald-900 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`
+    }, isRegistered ? '✓ Cobrado' : 'Registrar')));
   }))));
 };
 
@@ -4145,7 +4194,8 @@ const App = () => {
   }, activeTab === 'dashboard' && /*#__PURE__*/React.createElement(DashboardView, {
     setActiveTab: setActiveTab,
     onOpenNewModal: handleOpenNewModal,
-    onSelectAccountFilter: handleSelectAccountFilter
+    onSelectAccountFilter: handleSelectAccountFilter,
+    onEditModal: handleEditModal
   }), activeTab === 'sueldo' && /*#__PURE__*/React.createElement(SueldoEngineView, {
     setActiveTab: setActiveTab
   }), activeTab === 'movimientos' && /*#__PURE__*/React.createElement(MovimientosView, {
